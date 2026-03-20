@@ -183,7 +183,10 @@ export async function createDeployment(sdk: ChainSDK, wallet: DirectSecp256k1HdW
       fetch: options?.fetch,
     });
 
-    const services = Object.keys(leaseStatus.services).map(name => `${name}: ${leaseStatus.services[name].uris.join("\n")}`);
+    const services = Object.keys(leaseStatus.services).map(name => {
+      const uris = leaseStatus.services[name]?.uris;
+      return `${name}: ${uris?.length ? uris.join("\n") : "(no public URIs)"}`;
+    });
 
     logger.info(`🚀 Deployment is ready`);
     logger.info(services.join("\n"));
@@ -193,13 +196,10 @@ export async function createDeployment(sdk: ChainSDK, wallet: DirectSecp256k1HdW
       logger.error(`Stack: ${error.stack}`);
     }
 
-    try {
-      logger.info("Attempting to close deployment due to error...");
-      await sdk.akash.deployment.v1beta4.closeDeployment({ id: deploymentId }, buildTxOptions(inputs, "Deployment close by GitHub Action because of error"));
-      logger.info("Deployment closed successfully");
-    } catch (closeError) {
-      logger.warning(`Failed to close deployment: ${closeError instanceof Error ? closeError.message : String(closeError)}`);
-    }
+    // Do NOT auto-close deployment on error — the deployment may be functional
+    // even if the status check failed (e.g. URIs not yet assigned for multi-service SDLs).
+    // The caller is responsible for cleanup via the close-deployment action.
+    logger.warning("Deployment was NOT auto-closed. Use close-deployment action to clean up if needed.");
 
     throw error;
   }
@@ -271,7 +271,10 @@ export async function updateDeploymentManifest(
     fetch: options?.fetch,
   });
 
-  const services = Object.keys(leaseStatus.services).map(name => `${name}: ${leaseStatus.services[name].uris.join("\n")}`);
+  const services = Object.keys(leaseStatus.services).map(name => {
+    const uris = leaseStatus.services[name]?.uris;
+    return `${name}: ${uris?.length ? uris.join("\n") : "(no public URIs)"}`;
+  });
   logger.info("🚀 Deployment is ready");
   logger.info(services.join("\n"));
 
