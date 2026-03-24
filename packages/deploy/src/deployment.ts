@@ -90,7 +90,7 @@ export async function createDeployment(sdk: ChainSDK, wallet: DirectSecp256k1HdW
         denom: inputs.denom,
         amount: inputs.deposit,
       },
-      sources: [Source.grant],
+      sources: [Source.balance],
     },
   };
 
