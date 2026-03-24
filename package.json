@@ -11,5 +11,8 @@
   "volta": {
     "node": "24.13.0",
     "npm": "11.6.2"
+  },
+  "dependencies": {
+    "@akashnetwork/chain-sdk": "^1.0.0-alpha.27"
   }
 }
