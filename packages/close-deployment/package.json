@@ -20,7 +20,7 @@
   "dependencies": {
     "@actions/core": "^3.0.0",
     "@akashnetwork/actions-utils": "*",
-    "@akashnetwork/chain-sdk": "1.0.0-alpha.24",
+    "@akashnetwork/chain-sdk": "1.0.0-alpha.27",
     "@cosmjs/proto-signing": "^0.36.2",
     "@ucast/mongo2js": "^1.4.1",
     "js-yaml": "^4.1.1"

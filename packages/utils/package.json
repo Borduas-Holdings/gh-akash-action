@@ -24,7 +24,7 @@
   "author": "Akash Network Team",
   "license": "Apache-2.0",
   "dependencies": {
-    "@akashnetwork/chain-sdk": "1.0.0-alpha.24",
+    "@akashnetwork/chain-sdk": "1.0.0-alpha.27",
     "cockatiel": "^3.2.1",
     "long": "^5.3.2"
   },

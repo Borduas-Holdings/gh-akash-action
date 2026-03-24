@@ -7,7 +7,7 @@ export default defineConfig({
   platform: "node",
   outDir: "dist",
   clean: true,
-  sourcemap: true,
+  sourcemap: false,
   noExternal: [/.*/],
   treeshake: true,
   minify: false,
