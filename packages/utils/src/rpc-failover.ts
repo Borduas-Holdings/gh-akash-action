@@ -23,7 +23,7 @@ export interface ResolvedEndpoints {
 }
 
 export interface FailoverOptions {
-  /** Per-endpoint health-check timeout in ms. Default: 5000 */
+  /** Per-endpoint health-check timeout in ms. Default: 10000 */
   timeout?: number;
   /** Custom fetch implementation (for testing). */
   fetch?: typeof globalThis.fetch;
@@ -50,7 +50,7 @@ export async function resolveHealthyEndpoints(
   options: FailoverOptions = {},
 ): Promise<ResolvedEndpoints> {
   const list = parseEndpoints(endpoints);
-  const timeoutMs = options.timeout ?? 5_000;
+  const timeoutMs = options.timeout ?? 10_000;
   const fetchFn = options.fetch ?? globalThis.fetch;
   const logger = options.logger ?? console;
 

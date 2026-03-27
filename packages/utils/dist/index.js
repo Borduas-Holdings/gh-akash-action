@@ -86216,7 +86216,7 @@ var DEFAULT_RPC_ENDPOINTS = [
 var NODE_INFO_PATH = "/cosmos/base/tendermint/v1beta1/node_info";
 async function resolveHealthyEndpoints(endpoints, options = {}) {
   const list = parseEndpoints(endpoints);
-  const timeoutMs = options.timeout ?? 5e3;
+  const timeoutMs = options.timeout ?? 1e4;
   const fetchFn = options.fetch ?? globalThis.fetch;
   const logger = options.logger ?? console;
   for (const base of list) {
