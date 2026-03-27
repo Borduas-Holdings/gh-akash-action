@@ -11,7 +11,7 @@ async function run(): Promise<void> {
   try {
     core.info("Starting Akash deployment action...");
 
-    const inputs = getInputs();
+    const inputs = await getInputs();
 
     core.info("Initializing wallet...");
     const wallet = await DirectSecp256k1HdWallet.fromMnemonic(inputs.mnemonic, {

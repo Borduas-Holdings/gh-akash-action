@@ -2,6 +2,7 @@ import * as core from "@actions/core";
 import { load as parseYaml } from "js-yaml";
 import { guard } from "@ucast/mongo2js";
 import type { LeaseStatus } from "@akashnetwork/actions-utils";
+import { DEFAULT_RPC_ENDPOINTS, parseEndpoints, resolveHealthyEndpoints, type ResolvedEndpoints } from "@akashnetwork/actions-utils";
 
 export interface DeploymentContext {
   dseq: string;
@@ -28,15 +29,40 @@ export interface ActionInputs {
   txRpcUrl: string;
 }
 
-export function getInputs(): ActionInputs {
+/**
+ * Resolve RPC endpoints. If the legacy `rest-url` / `tx-rpc-url` inputs are
+ * explicitly set, use those directly (backward compat). Otherwise, run failover
+ * against the `rpc-endpoints` list (or built-in defaults).
+ */
+async function resolveRpc(): Promise<ResolvedEndpoints> {
+  const legacyRest = core.getInput("rest-url");
+  const legacyRpc = core.getInput("tx-rpc-url");
+
+  if (legacyRest || legacyRpc) {
+    core.info("Using explicit rest-url / tx-rpc-url (failover skipped)");
+    return {
+      restUrl: legacyRest || "https://rpc.akt.dev/rest",
+      rpcUrl: legacyRpc || "https://rpc.akt.dev/rpc",
+    };
+  }
+
+  const endpointsInput = core.getInput("rpc-endpoints");
+  const endpoints = endpointsInput
+    ? parseEndpoints(endpointsInput)
+    : [...DEFAULT_RPC_ENDPOINTS];
+
+  return resolveHealthyEndpoints(endpoints, { logger: core });
+}
+
+export async function getInputs(): Promise<ActionInputs> {
   const mnemonic = core.getInput("mnemonic", { required: true });
   const gas = core.getInput("gas") || "auto";
   const gasMultiplier = core.getInput("gas-multiplier") || "1.5";
   const fee = core.getInput("fee") || "";
   const denom = core.getInput("denom") || "uakt";
-  const queryRestUrl = core.getInput("rest-url") || "https://rpc.akt.dev/rest";
-  const txRpcUrl = core.getInput("tx-rpc-url") || "https://rpc.akt.dev/rpc";
   const { deploymentFilter, leaseFilter } = parseFilter(core.getInput("filter", { required: true }));
+
+  const rpc = await resolveRpc();
 
   return {
     mnemonic,
@@ -44,8 +70,8 @@ export function getInputs(): ActionInputs {
     gasMultiplier,
     fee,
     denom,
-    queryRestUrl,
-    txRpcUrl,
+    queryRestUrl: rpc.restUrl,
+    txRpcUrl: rpc.rpcUrl,
     deploymentFilter,
     leaseFilter
   };
