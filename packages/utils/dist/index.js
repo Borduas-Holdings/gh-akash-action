@@ -86222,12 +86222,12 @@ async function resolveHealthyEndpoints(endpoints, options = {}) {
   for (const base of list) {
     const trimmed = base.replace(/\/+$/, "");
     const restWithSuffix = `${trimmed}/rest`;
-    if (await isHealthy(restWithSuffix, timeoutMs, fetchFn)) {
+    if (await isHealthy(restWithSuffix, timeoutMs, fetchFn, logger)) {
       const rpcUrl = deriveRpcUrl(trimmed);
       logger.info(`RPC failover: using ${trimmed} (REST at ${restWithSuffix})`);
       return { restUrl: restWithSuffix, rpcUrl };
     }
-    if (await isHealthy(trimmed, timeoutMs, fetchFn)) {
+    if (await isHealthy(trimmed, timeoutMs, fetchFn, logger)) {
       const rpcUrl = deriveRpcUrl(trimmed);
       logger.info(`RPC failover: using ${trimmed} (REST at root)`);
       return { restUrl: trimmed, rpcUrl };
@@ -86246,15 +86246,36 @@ function parseProviders(input) {
   const list = Array.isArray(input) ? input : input.split(/[\n,]+/);
   return list.map((s) => s.trim()).filter((s) => s.startsWith("akash1"));
 }
-async function isHealthy(restBase, timeoutMs, fetchFn) {
+async function isHealthy(restBase, timeoutMs, fetchFn, logger) {
+  const url = `${restBase}${NODE_INFO_PATH}`;
   try {
-    const res = await fetchFn(`${restBase}${NODE_INFO_PATH}`, {
+    const res = await fetchFn(url, {
       signal: AbortSignal.timeout(timeoutMs)
     });
     return res.ok;
-  } catch {
-    return false;
+  } catch (err) {
+    const msg2 = err instanceof Error ? err.message : String(err);
+    logger?.info(`  health-check failed: ${url} \u2014 ${msg2}`);
+    try {
+      return await httpsProbe(url, timeoutMs);
+    } catch {
+      return false;
+    }
   }
+}
+function httpsProbe(url, timeoutMs) {
+  const https = __require("https");
+  return new Promise((resolve) => {
+    const req = https.get(url, { timeout: timeoutMs }, (res) => {
+      res.resume();
+      resolve(res.statusCode >= 200 && res.statusCode < 400);
+    });
+    req.on("error", () => resolve(false));
+    req.on("timeout", () => {
+      req.destroy();
+      resolve(false);
+    });
+  });
 }
 function deriveRpcUrl(base) {
   const url = new URL(base);

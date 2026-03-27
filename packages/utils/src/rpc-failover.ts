@@ -59,14 +59,14 @@ export async function resolveHealthyEndpoints(
 
     // Strategy 1: /rest suffix
     const restWithSuffix = `${trimmed}/rest`;
-    if (await isHealthy(restWithSuffix, timeoutMs, fetchFn)) {
+    if (await isHealthy(restWithSuffix, timeoutMs, fetchFn, logger)) {
       const rpcUrl = deriveRpcUrl(trimmed);
       logger.info(`RPC failover: using ${trimmed} (REST at ${restWithSuffix})`);
       return { restUrl: restWithSuffix, rpcUrl };
     }
 
     // Strategy 2: REST at root
-    if (await isHealthy(trimmed, timeoutMs, fetchFn)) {
+    if (await isHealthy(trimmed, timeoutMs, fetchFn, logger)) {
       const rpcUrl = deriveRpcUrl(trimmed);
       logger.info(`RPC failover: using ${trimmed} (REST at root)`);
       return { restUrl: trimmed, rpcUrl };
@@ -103,15 +103,41 @@ async function isHealthy(
   restBase: string,
   timeoutMs: number,
   fetchFn: typeof globalThis.fetch,
+  logger?: { info(msg: string): void },
 ): Promise<boolean> {
+  const url = `${restBase}${NODE_INFO_PATH}`;
   try {
-    const res = await fetchFn(`${restBase}${NODE_INFO_PATH}`, {
+    const res = await fetchFn(url, {
       signal: AbortSignal.timeout(timeoutMs),
     });
     return res.ok;
-  } catch {
-    return false;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger?.info(`  health-check failed: ${url} — ${msg}`);
+    // If fetch fails (e.g. undici TLS issue), try Node.js https as fallback
+    try {
+      return await httpsProbe(url, timeoutMs);
+    } catch {
+      return false;
+    }
   }
+}
+
+/**
+ * Fallback health probe using Node.js built-in https module.
+ * Some environments (GitHub Actions Node 24) have undici issues with
+ * certain TLS configurations that the built-in https module handles fine.
+ */
+function httpsProbe(url: string, timeoutMs: number): Promise<boolean> {
+  const https = require("node:https");
+  return new Promise((resolve) => {
+    const req = https.get(url, { timeout: timeoutMs }, (res: any) => {
+      res.resume(); // drain the response
+      resolve(res.statusCode >= 200 && res.statusCode < 400);
+    });
+    req.on("error", () => resolve(false));
+    req.on("timeout", () => { req.destroy(); resolve(false); });
+  });
 }
 
 /**
