@@ -86264,18 +86264,16 @@ async function isHealthy(restBase, timeoutMs, fetchFn, logger) {
   }
 }
 function httpsProbe(url, timeoutMs) {
-  const https = __require("https");
-  return new Promise((resolve) => {
-    const req = https.get(url, { timeout: timeoutMs }, (res) => {
-      res.resume();
-      resolve(res.statusCode >= 200 && res.statusCode < 400);
+  const { execFileSync } = __require("child_process");
+  try {
+    execFileSync("curl", ["-sf", "--max-time", String(Math.ceil(timeoutMs / 1e3)), url], {
+      stdio: "ignore",
+      timeout: timeoutMs + 2e3
     });
-    req.on("error", () => resolve(false));
-    req.on("timeout", () => {
-      req.destroy();
-      resolve(false);
-    });
-  });
+    return Promise.resolve(true);
+  } catch {
+    return Promise.resolve(false);
+  }
 }
 function deriveRpcUrl(base) {
   const url = new URL(base);

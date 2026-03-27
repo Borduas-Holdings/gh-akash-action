@@ -124,20 +124,22 @@ async function isHealthy(
 }
 
 /**
- * Fallback health probe using Node.js built-in https module.
- * Some environments (GitHub Actions Node 24) have undici issues with
- * certain TLS configurations that the built-in https module handles fine.
+ * Fallback health probe using curl via child_process.execFileSync.
+ * GitHub Actions Node 24 composite actions have networking issues where
+ * both undici fetch and node:https fail to connect, but curl works fine
+ * in the same environment. Uses execFileSync (no shell) to avoid injection.
  */
 function httpsProbe(url: string, timeoutMs: number): Promise<boolean> {
-  const https = require("node:https");
-  return new Promise((resolve) => {
-    const req = https.get(url, { timeout: timeoutMs }, (res: any) => {
-      res.resume(); // drain the response
-      resolve(res.statusCode >= 200 && res.statusCode < 400);
+  const { execFileSync } = require("node:child_process");
+  try {
+    execFileSync("curl", ["-sf", "--max-time", String(Math.ceil(timeoutMs / 1000)), url], {
+      stdio: "ignore",
+      timeout: timeoutMs + 2000,
     });
-    req.on("error", () => resolve(false));
-    req.on("timeout", () => { req.destroy(); resolve(false); });
-  });
+    return Promise.resolve(true);
+  } catch {
+    return Promise.resolve(false);
+  }
 }
 
 /**
