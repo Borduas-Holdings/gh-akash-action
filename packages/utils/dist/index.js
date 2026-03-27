@@ -2287,14 +2287,14 @@ function convertObjectValues(obj, fn) {
   return ret;
 }
 function createZeroMessage(desc) {
-  let msg;
+  let msg2;
   if (!needsPrototypeChain(desc)) {
-    msg = {
+    msg2 = {
       $typeName: desc.typeName
     };
     for (const member of desc.members) {
       if (member.kind == "oneof" || member.presence == IMPLICIT2) {
-        msg[member.localName] = createZeroField(member);
+        msg2[member.localName] = createZeroField(member);
       }
     }
   } else {
@@ -2321,8 +2321,8 @@ function createZeroMessage(desc) {
       }
       messagePrototypes.set(desc, { prototype, members });
     }
-    msg = Object.create(prototype);
-    msg.$typeName = desc.typeName;
+    msg2 = Object.create(prototype);
+    msg2.$typeName = desc.typeName;
     for (const member of desc.members) {
       if (members.has(member)) {
         continue;
@@ -2337,10 +2337,10 @@ function createZeroMessage(desc) {
           }
         }
       }
-      msg[member.localName] = createZeroField(member);
+      msg2[member.localName] = createZeroField(member);
     }
   }
-  return msg;
+  return msg2;
 }
 function needsPrototypeChain(desc) {
   switch (desc.file.edition) {
@@ -2849,9 +2849,9 @@ function makeReadOptions(options) {
   return options ? Object.assign(Object.assign({}, readDefaults), options) : readDefaults;
 }
 function fromBinary(schema4, bytes, options) {
-  const msg = reflect(schema4, void 0, false);
-  readMessage(msg, new BinaryReader(bytes), makeReadOptions(options), false, bytes.byteLength);
-  return msg.message;
+  const msg2 = reflect(schema4, void 0, false);
+  readMessage(msg2, new BinaryReader(bytes), makeReadOptions(options), false, bytes.byteLength);
+  return msg2.message;
 }
 function readMessage(message, reader, options, delimited, lengthOrDelimitedFieldNo) {
   var _a2;
@@ -3097,8 +3097,8 @@ var init_chunk_JGBH2EPB = __esm({
     init_wire();
   }
 });
-var init_chunk_5DCYIWCG = __esm({
-  "../../node_modules/@akashnetwork/chain-sdk/dist/esm/chunk-5DCYIWCG.js"() {
+var init_chunk_E76SLJJ3 = __esm({
+  "../../node_modules/@akashnetwork/chain-sdk/dist/esm/chunk-E76SLJJ3.js"() {
     init_chunk_JGBH2EPB();
     init_chunk_35BIJBXD();
     init_wire();
@@ -3110,9 +3110,9 @@ var init_chunk_5DCYIWCG = __esm({
     init_wire();
   }
 });
-var init_chunk_VRE72ZD5 = __esm({
-  "../../node_modules/@akashnetwork/chain-sdk/dist/esm/chunk-VRE72ZD5.js"() {
-    init_chunk_5DCYIWCG();
+var init_chunk_M2ZK7HEC = __esm({
+  "../../node_modules/@akashnetwork/chain-sdk/dist/esm/chunk-M2ZK7HEC.js"() {
+    init_chunk_E76SLJJ3();
     init_chunk_35BIJBXD();
     init_wire();
     init_wire();
@@ -3980,9 +3980,9 @@ var init_chunk_XIHNXIBW = __esm({
     };
   }
 });
-var init_chunk_5YECXI3P = __esm({
-  "../../node_modules/@akashnetwork/chain-sdk/dist/esm/chunk-5YECXI3P.js"() {
-    init_chunk_5DCYIWCG();
+var init_chunk_RUC3LXDX = __esm({
+  "../../node_modules/@akashnetwork/chain-sdk/dist/esm/chunk-RUC3LXDX.js"() {
+    init_chunk_E76SLJJ3();
     init_chunk_JGBH2EPB();
     init_chunk_ESEV5MX6();
     init_chunk_35BIJBXD();
@@ -5991,9 +5991,9 @@ __export(tx_akash_MFMRS2ID_exports, {
 });
 var Msg17;
 
-// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/reflection_akash-WUBSNT7I.js
-var reflection_akash_WUBSNT7I_exports = {};
-__export(reflection_akash_WUBSNT7I_exports, {
+// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/reflection_akash-YHEVUIB6.js
+var reflection_akash_YHEVUIB6_exports = {};
+__export(reflection_akash_YHEVUIB6_exports, {
   ReflectionService: () => ReflectionService3
 });
 var ReflectionService3;
@@ -6153,16 +6153,16 @@ var init_chunk_GEEFQK3U = __esm({
   }
 });
 
-// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/query_akash-N2BNNOTD.js
-var query_akash_N2BNNOTD_exports = {};
-__export(query_akash_N2BNNOTD_exports, {
+// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/query_akash-XYBD7HGP.js
+var query_akash_XYBD7HGP_exports = {};
+__export(query_akash_XYBD7HGP_exports, {
   Query: () => Query24
 });
 var Query24;
 
-// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/service_akash-KPU6LPVP.js
-var service_akash_KPU6LPVP_exports = {};
-__export(service_akash_KPU6LPVP_exports, {
+// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/service_akash-KSM5UR43.js
+var service_akash_KSM5UR43_exports = {};
+__export(service_akash_KSM5UR43_exports, {
   Msg: () => Msg23
 });
 var Msg23;
@@ -6209,13 +6209,13 @@ var init_chunk_NX2OO5DC = __esm({
   }
 });
 
-// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/chunk-CT7AHZAH.js
+// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/chunk-BNXSING3.js
 function createBaseBalance() {
   return { denom: "", amount: "" };
 }
 var _Balance;
-var init_chunk_CT7AHZAH = __esm({
-  "../../node_modules/@akashnetwork/chain-sdk/dist/esm/chunk-CT7AHZAH.js"() {
+var init_chunk_BNXSING3 = __esm({
+  "../../node_modules/@akashnetwork/chain-sdk/dist/esm/chunk-BNXSING3.js"() {
     init_chunk_HAJWJBJS();
     init_chunk_NX2OO5DC();
     init_chunk_GEEFQK3U();
@@ -6292,12 +6292,12 @@ var init_chunk_CT7AHZAH = __esm({
     patched2(_Balance);
   }
 });
-var init_chunk_JISXXX24 = __esm({
-  "../../node_modules/@akashnetwork/chain-sdk/dist/esm/chunk-JISXXX24.js"() {
+var init_chunk_FXRP7A3E = __esm({
+  "../../node_modules/@akashnetwork/chain-sdk/dist/esm/chunk-FXRP7A3E.js"() {
     init_chunk_CVQBDXFP();
     init_chunk_OHAEKHAC();
-    init_chunk_5YECXI3P();
-    init_chunk_CT7AHZAH();
+    init_chunk_RUC3LXDX();
+    init_chunk_BNXSING3();
     init_chunk_HA6PREOG();
     init_chunk_35BIJBXD();
     init_wire();
@@ -6308,17 +6308,17 @@ var init_chunk_JISXXX24 = __esm({
   }
 });
 
-// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/query_akash-4CTLBKZR.js
-var query_akash_4CTLBKZR_exports = {};
-__export(query_akash_4CTLBKZR_exports, {
+// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/query_akash-2XAWK4QC.js
+var query_akash_2XAWK4QC_exports = {};
+__export(query_akash_2XAWK4QC_exports, {
   Query: () => Query26
 });
 var Query26;
-var init_chunk_XFCN5LRY = __esm({
-  "../../node_modules/@akashnetwork/chain-sdk/dist/esm/chunk-XFCN5LRY.js"() {
+var init_chunk_H5WUFEMM = __esm({
+  "../../node_modules/@akashnetwork/chain-sdk/dist/esm/chunk-H5WUFEMM.js"() {
     init_chunk_CVQBDXFP();
     init_chunk_OHAEKHAC();
-    init_chunk_5YECXI3P();
+    init_chunk_RUC3LXDX();
     init_chunk_NX2OO5DC();
     init_chunk_35BIJBXD();
     init_wire();
@@ -6327,9 +6327,9 @@ var init_chunk_XFCN5LRY = __esm({
   }
 });
 
-// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/service_akash-AZFAYT7H.js
-var service_akash_AZFAYT7H_exports = {};
-__export(service_akash_AZFAYT7H_exports, {
+// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/service_akash-5JSE44LJ.js
+var service_akash_5JSE44LJ_exports = {};
+__export(service_akash_5JSE44LJ_exports, {
   Msg: () => Msg25
 });
 var Msg25;
@@ -6348,9 +6348,9 @@ __export(query_akash_KKNAAUKF_exports, {
 });
 var Query28;
 
-// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/query_akash-4OVOGRBT.js
-var query_akash_4OVOGRBT_exports = {};
-__export(query_akash_4OVOGRBT_exports, {
+// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/query_akash-GKNMAC72.js
+var query_akash_GKNMAC72_exports = {};
+__export(query_akash_GKNMAC72_exports, {
   Query: () => Query29
 });
 var Query29;
@@ -6362,30 +6362,30 @@ __export(service_akash_KKV7TGYK_exports, {
 });
 var Msg26;
 
-// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/query_akash-DJ7LTLRE.js
-var query_akash_DJ7LTLRE_exports = {};
-__export(query_akash_DJ7LTLRE_exports, {
+// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/query_akash-347IWP76.js
+var query_akash_347IWP76_exports = {};
+__export(query_akash_347IWP76_exports, {
   Query: () => Query30
 });
 var Query30;
 
-// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/service_akash-WRGOVR7I.js
-var service_akash_WRGOVR7I_exports = {};
-__export(service_akash_WRGOVR7I_exports, {
+// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/service_akash-QEN5EQUY.js
+var service_akash_QEN5EQUY_exports = {};
+__export(service_akash_QEN5EQUY_exports, {
   Msg: () => Msg27
 });
 var Msg27;
 
-// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/query_akash-RGYTHUNZ.js
-var query_akash_RGYTHUNZ_exports = {};
-__export(query_akash_RGYTHUNZ_exports, {
+// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/query_akash-LK7RYFHN.js
+var query_akash_LK7RYFHN_exports = {};
+__export(query_akash_LK7RYFHN_exports, {
   Query: () => Query31
 });
 var Query31;
 
-// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/service_akash-RQDCQLQH.js
-var service_akash_RQDCQLQH_exports = {};
-__export(service_akash_RQDCQLQH_exports, {
+// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/service_akash-WLSC2YDO.js
+var service_akash_WLSC2YDO_exports = {};
+__export(service_akash_WLSC2YDO_exports, {
   Msg: () => Msg28
 });
 var Msg28;
@@ -9522,19 +9522,19 @@ var require_assert = __commonJS({
     exports$1.assert = assert;
     exports$1.assertDefined = assertDefined;
     exports$1.assertDefinedAndNotNull = assertDefinedAndNotNull;
-    function assert(condition, msg) {
+    function assert(condition, msg2) {
       if (!condition) {
-        throw new Error(msg || "condition is not truthy");
+        throw new Error(msg2 || "condition is not truthy");
       }
     }
-    function assertDefined(value, msg) {
+    function assertDefined(value, msg2) {
       if (value === void 0) {
-        throw new Error(msg ?? "value is undefined");
+        throw new Error(msg2 ?? "value is undefined");
       }
     }
-    function assertDefinedAndNotNull(value, msg) {
+    function assertDefinedAndNotNull(value, msg2) {
       if (value === void 0 || value === null) {
-        throw new Error(msg ?? "value is undefined or null");
+        throw new Error(msg2 ?? "value is undefined or null");
       }
     }
   }
@@ -9830,7 +9830,7 @@ var require_utils = __commonJS({
     };
     exports$1.Hash = Hash;
     function createHasher(hashCons) {
-      const hashC = (msg) => hashCons().update(toBytes2(msg)).digest();
+      const hashC = (msg2) => hashCons().update(toBytes2(msg2)).digest();
       const tmp = hashCons();
       hashC.outputLen = tmp.outputLen;
       hashC.blockLen = tmp.blockLen;
@@ -9838,7 +9838,7 @@ var require_utils = __commonJS({
       return hashC;
     }
     function createOptHasher(hashCons) {
-      const hashC = (msg, opts) => hashCons(opts).update(toBytes2(msg)).digest();
+      const hashC = (msg2, opts) => hashCons(opts).update(toBytes2(msg2)).digest();
       const tmp = hashCons({});
       hashC.outputLen = tmp.outputLen;
       hashC.blockLen = tmp.blockLen;
@@ -9846,7 +9846,7 @@ var require_utils = __commonJS({
       return hashC;
     }
     function createXOFer(hashCons) {
-      const hashC = (msg, opts) => hashCons(opts).update(toBytes2(msg)).digest();
+      const hashC = (msg2, opts) => hashCons(opts).update(toBytes2(msg2)).digest();
       const tmp = hashCons({});
       hashC.outputLen = tmp.outputLen;
       hashC.blockLen = tmp.blockLen;
@@ -13978,7 +13978,7 @@ var require_poly1305 = __commonJS({
       }
     };
     function wrapConstructorWithKey(hashCons) {
-      const hashC = (msg, key) => hashCons(key).update((0, utils_ts_1.toBytes)(msg)).digest();
+      const hashC = (msg2, key) => hashCons(key).update((0, utils_ts_1.toBytes)(msg2)).digest();
       const tmp = hashCons(new Uint8Array(32));
       hashC.outputLen = tmp.outputLen;
       hashC.blockLen = tmp.blockLen;
@@ -14190,9 +14190,9 @@ var require_chacha = __commonJS({
       rounds: 12
     });
     var ZEROS16 = /* @__PURE__ */ new Uint8Array(16);
-    var updatePadded = (h, msg) => {
-      h.update(msg);
-      const left = msg.length % 16;
+    var updatePadded = (h, msg2) => {
+      h.update(msg2);
+      const left = msg2.length % 16;
       if (left)
         h.update(ZEROS16.subarray(left));
     };
@@ -15684,17 +15684,17 @@ var require_edwards = __commonJS({
         return getExtendedPublicKey(secretKey).pointBytes;
       }
       function hashDomainToScalar(context = Uint8Array.of(), ...msgs) {
-        const msg = (0, utils_ts_1.concatBytes)(...msgs);
-        return modN_LE(cHash(domain(msg, (0, utils_ts_1.ensureBytes)("context", context), !!prehash)));
+        const msg2 = (0, utils_ts_1.concatBytes)(...msgs);
+        return modN_LE(cHash(domain(msg2, (0, utils_ts_1.ensureBytes)("context", context), !!prehash)));
       }
-      function sign(msg, secretKey, options = {}) {
-        msg = (0, utils_ts_1.ensureBytes)("message", msg);
+      function sign(msg2, secretKey, options = {}) {
+        msg2 = (0, utils_ts_1.ensureBytes)("message", msg2);
         if (prehash)
-          msg = prehash(msg);
+          msg2 = prehash(msg2);
         const { prefix, scalar, pointBytes } = getExtendedPublicKey(secretKey);
-        const r = hashDomainToScalar(options.context, prefix, msg);
+        const r = hashDomainToScalar(options.context, prefix, msg2);
         const R = BASE.multiply(r).toBytes();
-        const k = hashDomainToScalar(options.context, R, pointBytes, msg);
+        const k = hashDomainToScalar(options.context, R, pointBytes, msg2);
         const s = Fn.create(r + k * scalar);
         if (!Fn.isValid(s))
           throw new Error("sign failed: invalid s");
@@ -15702,16 +15702,16 @@ var require_edwards = __commonJS({
         return (0, utils_ts_1._abytes2)(rs, lengths.signature, "result");
       }
       const verifyOpts = { zip215: true };
-      function verify(sig, msg, publicKey, options = verifyOpts) {
+      function verify(sig, msg2, publicKey, options = verifyOpts) {
         const { context, zip215 } = options;
         const len = lengths.signature;
         sig = (0, utils_ts_1.ensureBytes)("signature", sig, len);
-        msg = (0, utils_ts_1.ensureBytes)("message", msg);
+        msg2 = (0, utils_ts_1.ensureBytes)("message", msg2);
         publicKey = (0, utils_ts_1.ensureBytes)("publicKey", publicKey, lengths.publicKey);
         if (zip215 !== void 0)
           (0, utils_ts_1._abool2)(zip215, "zip215");
         if (prehash)
-          msg = prehash(msg);
+          msg2 = prehash(msg2);
         const mid = len / 2;
         const r = sig.subarray(0, mid);
         const s = (0, utils_ts_1.bytesToNumberLE)(sig.subarray(mid, len));
@@ -15725,7 +15725,7 @@ var require_edwards = __commonJS({
         }
         if (!zip215 && A.isSmallOrder())
           return false;
-        const k = hashDomainToScalar(context, R.toBytes(), A.toBytes(), msg);
+        const k = hashDomainToScalar(context, R.toBytes(), A.toBytes(), msg2);
         const RkA = R.add(A.multiplyUnsafe(k));
         return RkA.subtract(SB).clearCofactor().is0();
       }
@@ -15881,8 +15881,8 @@ var require_hash_to_curve = __commonJS({
         throw new Error("DST must be Uint8Array or string");
       return typeof DST === "string" ? (0, utils_ts_1.utf8ToBytes)(DST) : DST;
     }
-    function expand_message_xmd(msg, DST, lenInBytes, H) {
-      (0, utils_ts_1.abytes)(msg);
+    function expand_message_xmd(msg2, DST, lenInBytes, H) {
+      (0, utils_ts_1.abytes)(msg2);
       anum(lenInBytes);
       DST = normDST(DST);
       if (DST.length > 255)
@@ -15895,7 +15895,7 @@ var require_hash_to_curve = __commonJS({
       const Z_pad = i2osp(0, r_in_bytes);
       const l_i_b_str = i2osp(lenInBytes, 2);
       const b = new Array(ell);
-      const b_0 = H((0, utils_ts_1.concatBytes)(Z_pad, msg, l_i_b_str, i2osp(0, 1), DST_prime));
+      const b_0 = H((0, utils_ts_1.concatBytes)(Z_pad, msg2, l_i_b_str, i2osp(0, 1), DST_prime));
       b[0] = H((0, utils_ts_1.concatBytes)(b_0, i2osp(1, 1), DST_prime));
       for (let i = 1; i <= ell; i++) {
         const args = [strxor(b_0, b[i - 1]), i2osp(i + 1, 1), DST_prime];
@@ -15904,8 +15904,8 @@ var require_hash_to_curve = __commonJS({
       const pseudo_random_bytes = (0, utils_ts_1.concatBytes)(...b);
       return pseudo_random_bytes.slice(0, lenInBytes);
     }
-    function expand_message_xof(msg, DST, lenInBytes, k, H) {
-      (0, utils_ts_1.abytes)(msg);
+    function expand_message_xof(msg2, DST, lenInBytes, k, H) {
+      (0, utils_ts_1.abytes)(msg2);
       anum(lenInBytes);
       DST = normDST(DST);
       if (DST.length > 255) {
@@ -15914,9 +15914,9 @@ var require_hash_to_curve = __commonJS({
       }
       if (lenInBytes > 65535 || DST.length > 255)
         throw new Error("expand_message_xof: invalid lenInBytes");
-      return H.create({ dkLen: lenInBytes }).update(msg).update(i2osp(lenInBytes, 2)).update(DST).update(i2osp(DST.length, 1)).digest();
+      return H.create({ dkLen: lenInBytes }).update(msg2).update(i2osp(lenInBytes, 2)).update(DST).update(i2osp(DST.length, 1)).digest();
     }
-    function hash_to_field(msg, count, options) {
+    function hash_to_field(msg2, count, options) {
       (0, utils_ts_1._validateObject)(options, {
         p: "bigint",
         m: "number",
@@ -15926,18 +15926,18 @@ var require_hash_to_curve = __commonJS({
       const { p: p3, k, m, hash: hash2, expand, DST } = options;
       if (!(0, utils_ts_1.isHash)(options.hash))
         throw new Error("expected valid hash");
-      (0, utils_ts_1.abytes)(msg);
+      (0, utils_ts_1.abytes)(msg2);
       anum(count);
       const log2p = p3.toString(2).length;
       const L = Math.ceil((log2p + k) / 8);
       const len_in_bytes = count * m * L;
       let prb;
       if (expand === "xmd") {
-        prb = expand_message_xmd(msg, DST, len_in_bytes, hash2);
+        prb = expand_message_xmd(msg2, DST, len_in_bytes, hash2);
       } else if (expand === "xof") {
-        prb = expand_message_xof(msg, DST, len_in_bytes, k, hash2);
+        prb = expand_message_xof(msg2, DST, len_in_bytes, k, hash2);
       } else if (expand === "_internal_pass") {
-        prb = msg;
+        prb = msg2;
       } else {
         throw new Error('expand must be "xmd" or "xof"');
       }
@@ -15979,17 +15979,17 @@ var require_hash_to_curve = __commonJS({
       }
       return {
         defaults,
-        hashToCurve(msg, options) {
+        hashToCurve(msg2, options) {
           const opts = Object.assign({}, defaults, options);
-          const u = hash_to_field(msg, 2, opts);
+          const u = hash_to_field(msg2, 2, opts);
           const u0 = map2(u[0]);
           const u1 = map2(u[1]);
           return clear(u0.add(u1));
         },
-        encodeToCurve(msg, options) {
+        encodeToCurve(msg2, options) {
           const optsDst = defaults.encodeDST ? { DST: defaults.encodeDST } : {};
           const opts = Object.assign({}, defaults, optsDst, options);
-          const u = hash_to_field(msg, 1, opts);
+          const u = hash_to_field(msg2, 1, opts);
           const u0 = map2(u[0]);
           return clear(u0);
         },
@@ -16004,10 +16004,10 @@ var require_hash_to_curve = __commonJS({
         },
         // hash_to_scalar can produce 0: https://www.rfc-editor.org/errata/eid8393
         // RFC 9380, draft-irtf-cfrg-bbs-signatures-08
-        hashToScalar(msg, options) {
+        hashToScalar(msg2, options) {
           const N = Point.Fn.ORDER;
           const opts = Object.assign({}, defaults, { p: N, m: 1, DST: exports$1._DST_scalar }, options);
-          return hash_to_field(msg, 1, opts)[0][0];
+          return hash_to_field(msg2, 1, opts)[0][0];
         }
       };
     }
@@ -16477,13 +16477,13 @@ var require_ed25519 = __commonJS({
     _RistrettoPoint.Fn = /* @__PURE__ */ (() => Fn)();
     exports$1.ristretto255 = { Point: _RistrettoPoint };
     exports$1.ristretto255_hasher = {
-      hashToCurve(msg, options) {
+      hashToCurve(msg2, options) {
         const DST = options?.DST || "ristretto255_XMD:SHA-512_R255MAP_RO_";
-        const xmd = (0, hash_to_curve_ts_1.expand_message_xmd)(msg, DST, 64, sha2_js_1.sha512);
+        const xmd = (0, hash_to_curve_ts_1.expand_message_xmd)(msg2, DST, 64, sha2_js_1.sha512);
         return ristretto255_map(xmd);
       },
-      hashToScalar(msg, options = { DST: hash_to_curve_ts_1._DST_scalar }) {
-        const xmd = (0, hash_to_curve_ts_1.expand_message_xmd)(msg, options.DST, 64, sha2_js_1.sha512);
+      hashToScalar(msg2, options = { DST: hash_to_curve_ts_1._DST_scalar }) {
+        const xmd = (0, hash_to_curve_ts_1.expand_message_xmd)(msg2, options.DST, 64, sha2_js_1.sha512);
         return Fn.create((0, utils_ts_1.bytesToNumberLE)(xmd));
       }
     };
@@ -22041,8 +22041,8 @@ var require_stdtx = __commonJS({
     exports$1.isStdTx = isStdTx;
     exports$1.makeStdTx = makeStdTx;
     function isStdTx(txValue) {
-      const { memo, msg, fee, signatures } = txValue;
-      return typeof memo === "string" && Array.isArray(msg) && typeof fee === "object" && Array.isArray(signatures);
+      const { memo, msg: msg2, fee, signatures } = txValue;
+      return typeof memo === "string" && Array.isArray(msg2) && typeof fee === "object" && Array.isArray(signatures);
     }
     function makeStdTx(content, signatures) {
       return {
@@ -27770,11 +27770,11 @@ var require_aminomessages2 = __commonJS({
     exports$1.isAminoMsgSend = isAminoMsgSend;
     exports$1.isAminoMsgMultiSend = isAminoMsgMultiSend;
     exports$1.createBankAminoConverters = createBankAminoConverters;
-    function isAminoMsgSend(msg) {
-      return msg.type === "cosmos-sdk/MsgSend";
+    function isAminoMsgSend(msg2) {
+      return msg2.type === "cosmos-sdk/MsgSend";
     }
-    function isAminoMsgMultiSend(msg) {
-      return msg.type === "cosmos-sdk/MsgMultiSend";
+    function isAminoMsgMultiSend(msg2) {
+      return msg2.type === "cosmos-sdk/MsgMultiSend";
     }
     function createBankAminoConverters() {
       return {
@@ -29502,8 +29502,8 @@ var require_aminomessages3 = __commonJS({
     Object.defineProperty(exports$1, "__esModule", { value: true });
     exports$1.isAminoMsgVerifyInvariant = isAminoMsgVerifyInvariant;
     exports$1.createCrysisAminoConverters = createCrysisAminoConverters;
-    function isAminoMsgVerifyInvariant(msg) {
-      return msg.type === "cosmos-sdk/MsgVerifyInvariant";
+    function isAminoMsgVerifyInvariant(msg2) {
+      return msg2.type === "cosmos-sdk/MsgVerifyInvariant";
     }
     function createCrysisAminoConverters() {
       throw new Error("Not implemented");
@@ -29520,17 +29520,17 @@ var require_aminomessages4 = __commonJS({
     exports$1.isAminoMsgWithdrawValidatorCommission = isAminoMsgWithdrawValidatorCommission;
     exports$1.isAminoMsgFundCommunityPool = isAminoMsgFundCommunityPool;
     exports$1.createDistributionAminoConverters = createDistributionAminoConverters;
-    function isAminoMsgSetWithdrawAddress(msg) {
-      return msg.type === "cosmos-sdk/MsgModifyWithdrawAddress";
+    function isAminoMsgSetWithdrawAddress(msg2) {
+      return msg2.type === "cosmos-sdk/MsgModifyWithdrawAddress";
     }
-    function isAminoMsgWithdrawDelegatorReward(msg) {
-      return msg.type === "cosmos-sdk/MsgWithdrawDelegationReward";
+    function isAminoMsgWithdrawDelegatorReward(msg2) {
+      return msg2.type === "cosmos-sdk/MsgWithdrawDelegationReward";
     }
-    function isAminoMsgWithdrawValidatorCommission(msg) {
-      return msg.type === "cosmos-sdk/MsgWithdrawValidatorCommission";
+    function isAminoMsgWithdrawValidatorCommission(msg2) {
+      return msg2.type === "cosmos-sdk/MsgWithdrawValidatorCommission";
     }
-    function isAminoMsgFundCommunityPool(msg) {
-      return msg.type === "cosmos-sdk/MsgFundCommunityPool";
+    function isAminoMsgFundCommunityPool(msg2) {
+      return msg2.type === "cosmos-sdk/MsgFundCommunityPool";
     }
     function createDistributionAminoConverters() {
       return {
@@ -32369,8 +32369,8 @@ var require_aminomessages5 = __commonJS({
     Object.defineProperty(exports$1, "__esModule", { value: true });
     exports$1.isAminoMsgSubmitEvidence = isAminoMsgSubmitEvidence;
     exports$1.createEvidenceAminoConverters = createEvidenceAminoConverters;
-    function isAminoMsgSubmitEvidence(msg) {
-      return msg.type === "cosmos-sdk/MsgSubmitEvidence";
+    function isAminoMsgSubmitEvidence(msg2) {
+      return msg2.type === "cosmos-sdk/MsgSubmitEvidence";
     }
     function createEvidenceAminoConverters() {
       throw new Error("Not implemented");
@@ -34369,17 +34369,17 @@ var require_aminomessages7 = __commonJS({
     var gov_1 = require_gov();
     var any_1 = require_any();
     var queryclient_1 = require_queryclient2();
-    function isAminoMsgSubmitProposal(msg) {
-      return msg.type === "cosmos-sdk/MsgSubmitProposal";
+    function isAminoMsgSubmitProposal(msg2) {
+      return msg2.type === "cosmos-sdk/MsgSubmitProposal";
     }
-    function isAminoMsgVote(msg) {
-      return msg.type === "cosmos-sdk/MsgVote";
+    function isAminoMsgVote(msg2) {
+      return msg2.type === "cosmos-sdk/MsgVote";
     }
-    function isAminoMsgVoteWeighted(msg) {
-      return msg.type === "cosmos-sdk/MsgVoteWeighted";
+    function isAminoMsgVoteWeighted(msg2) {
+      return msg2.type === "cosmos-sdk/MsgVoteWeighted";
     }
-    function isAminoMsgDeposit(msg) {
-      return msg.type === "cosmos-sdk/MsgDeposit";
+    function isAminoMsgDeposit(msg2) {
+      return msg2.type === "cosmos-sdk/MsgDeposit";
     }
     function createGovAminoConverters() {
       return {
@@ -42145,8 +42145,8 @@ var require_aminomessages9 = __commonJS({
     exports$1.createIbcAminoConverters = createIbcAminoConverters;
     var amino_1 = require_build5();
     var tx_1 = require_tx9();
-    function isAminoMsgTransfer(msg) {
-      return msg.type === "cosmos-sdk/MsgTransfer";
+    function isAminoMsgTransfer(msg2) {
+      return msg2.type === "cosmos-sdk/MsgTransfer";
     }
     function createIbcAminoConverters() {
       return {
@@ -58682,8 +58682,8 @@ var require_aminomessages10 = __commonJS({
     Object.defineProperty(exports$1, "__esModule", { value: true });
     exports$1.isAminoMsgUnjail = isAminoMsgUnjail;
     exports$1.createSlashingAminoConverters = createSlashingAminoConverters;
-    function isAminoMsgUnjail(msg) {
-      return msg.type === "cosmos-sdk/MsgUnjail";
+    function isAminoMsgUnjail(msg2) {
+      return msg2.type === "cosmos-sdk/MsgUnjail";
     }
     function createSlashingAminoConverters() {
       throw new Error("Not implemented");
@@ -59299,23 +59299,23 @@ var require_aminomessages11 = __commonJS({
       const parsed = math_1.Decimal.fromUserInput(decimal, 18);
       return parsed.atomics;
     }
-    function isAminoMsgCreateValidator(msg) {
-      return msg.type === "cosmos-sdk/MsgCreateValidator";
+    function isAminoMsgCreateValidator(msg2) {
+      return msg2.type === "cosmos-sdk/MsgCreateValidator";
     }
-    function isAminoMsgEditValidator(msg) {
-      return msg.type === "cosmos-sdk/MsgEditValidator";
+    function isAminoMsgEditValidator(msg2) {
+      return msg2.type === "cosmos-sdk/MsgEditValidator";
     }
-    function isAminoMsgDelegate(msg) {
-      return msg.type === "cosmos-sdk/MsgDelegate";
+    function isAminoMsgDelegate(msg2) {
+      return msg2.type === "cosmos-sdk/MsgDelegate";
     }
-    function isAminoMsgBeginRedelegate(msg) {
-      return msg.type === "cosmos-sdk/MsgBeginRedelegate";
+    function isAminoMsgBeginRedelegate(msg2) {
+      return msg2.type === "cosmos-sdk/MsgBeginRedelegate";
     }
-    function isAminoMsgUndelegate(msg) {
-      return msg.type === "cosmos-sdk/MsgUndelegate";
+    function isAminoMsgUndelegate(msg2) {
+      return msg2.type === "cosmos-sdk/MsgUndelegate";
     }
-    function isAminoMsgCancelUnbondingDelegation(msg) {
-      return msg.type === "cosmos-sdk/MsgCancelUnbondingDelegation";
+    function isAminoMsgCancelUnbondingDelegation(msg2) {
+      return msg2.type === "cosmos-sdk/MsgCancelUnbondingDelegation";
     }
     function createStakingAminoConverters() {
       return {
@@ -71273,8 +71273,8 @@ var require_aminomessages12 = __commonJS({
     Object.defineProperty(exports$1, "__esModule", { value: true });
     exports$1.isAminoMsgCreateVestingAccount = isAminoMsgCreateVestingAccount;
     exports$1.createVestingAminoConverters = createVestingAminoConverters;
-    function isAminoMsgCreateVestingAccount(msg) {
-      return msg.type === "cosmos-sdk/MsgCreateVestingAccount";
+    function isAminoMsgCreateVestingAccount(msg2) {
+      return msg2.type === "cosmos-sdk/MsgCreateVestingAccount";
     }
     function createVestingAminoConverters() {
       return {
@@ -76199,7 +76199,7 @@ var require_websocket = __commonJS({
     var tls = __require("tls");
     var { randomBytes, createHash } = __require("crypto");
     var { Readable } = __require("stream");
-    var { URL } = __require("url");
+    var { URL: URL2 } = __require("url");
     var PerMessageDeflate = require_permessage_deflate();
     var Receiver = require_receiver();
     var Sender = require_sender();
@@ -76417,8 +76417,8 @@ var require_websocket = __commonJS({
       close(code, data2) {
         if (this.readyState === _WebSocket.CLOSED) return;
         if (this.readyState === _WebSocket.CONNECTING) {
-          const msg = "WebSocket was closed before the connection was established";
-          return abortHandshake(this, this._req, msg);
+          const msg2 = "WebSocket was closed before the connection was established";
+          return abortHandshake(this, this._req, msg2);
         }
         if (this.readyState === _WebSocket.CLOSING) {
           if (this._closeFrameSent && (this._closeFrameReceived || this._receiver._writableState.errorEmitted)) {
@@ -76541,8 +76541,8 @@ var require_websocket = __commonJS({
       terminate() {
         if (this.readyState === _WebSocket.CLOSED) return;
         if (this.readyState === _WebSocket.CONNECTING) {
-          const msg = "WebSocket was closed before the connection was established";
-          return abortHandshake(this, this._req, msg);
+          const msg2 = "WebSocket was closed before the connection was established";
+          return abortHandshake(this, this._req, msg2);
         }
         if (this._socket) {
           this._readyState = _WebSocket.CLOSING;
@@ -76638,11 +76638,11 @@ var require_websocket = __commonJS({
         );
       }
       let parsedUrl;
-      if (address instanceof URL) {
+      if (address instanceof URL2) {
         parsedUrl = address;
         websocket._url = address.href;
       } else {
-        parsedUrl = new URL(address);
+        parsedUrl = new URL2(address);
         websocket._url = address;
       }
       const isUnixSocket = parsedUrl.protocol === "ws+unix:";
@@ -76748,7 +76748,7 @@ var require_websocket = __commonJS({
           req.abort();
           let addr;
           try {
-            addr = new URL(location, address);
+            addr = new URL2(location, address);
           } catch (err) {
             emitErrorAndClose(websocket, err);
             return;
@@ -76996,8 +76996,8 @@ var require_stream = __commonJS({
         objectMode: false,
         writableObjectMode: false
       });
-      ws.on("message", function message(msg) {
-        if (!duplex.push(msg)) {
+      ws.on("message", function message(msg2) {
+        if (!duplex.push(msg2)) {
           resumeOnReceiverDrain = false;
           ws._socket.pause();
         }
@@ -82453,11 +82453,11 @@ var require_signingstargateclient = __commonJS({
         }
         const pubkey = (0, proto_signing_1.encodePubkey)((0, amino_1.encodeSecp256k1Pubkey)(accountFromSigner.pubkey));
         const signMode = signing_1.SignMode.SIGN_MODE_LEGACY_AMINO_JSON;
-        const msgs = messages.map((msg) => this.aminoTypes.toAmino(msg));
+        const msgs = messages.map((msg2) => this.aminoTypes.toAmino(msg2));
         const signDoc = (0, amino_1.makeSignDoc)(msgs, fee, chainId, memo, accountNumber, sequence, timeoutHeight);
         const { signature, signed } = await this.signer.signAmino(signerAddress, signDoc);
         const signedTxBody = {
-          messages: signed.msgs.map((msg) => this.aminoTypes.fromAmino(msg)),
+          messages: signed.msgs.map((msg2) => this.aminoTypes.fromAmino(msg2)),
           memo: signed.memo,
           timeoutHeight
         };
@@ -82818,25 +82818,25 @@ __export(service_akash_B5XMI26Q_exports, {
 });
 var NodeRPC, ClusterRPC;
 
-// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/service_akash-VMU3LNBA.js
-var service_akash_VMU3LNBA_exports = {};
-__export(service_akash_VMU3LNBA_exports, {
+// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/service_akash-FI6WXDZP.js
+var service_akash_FI6WXDZP_exports = {};
+__export(service_akash_FI6WXDZP_exports, {
   LeaseRPC: () => LeaseRPC
 });
 var LeaseRPC;
 
-// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/service_akash-CQVYVSHE.js
-var service_akash_CQVYVSHE_exports = {};
-__export(service_akash_CQVYVSHE_exports, {
+// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/service_akash-UDPD4GFX.js
+var service_akash_UDPD4GFX_exports = {};
+__export(service_akash_UDPD4GFX_exports, {
   ProviderRPC: () => ProviderRPC
 });
 var ProviderRPC;
 
-// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/chunk-RIIYZIXM.js
-init_chunk_VRE72ZD5();
+// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/chunk-WH2VEITL.js
+init_chunk_M2ZK7HEC();
 init_chunk_XIHNXIBW();
-init_chunk_5YECXI3P();
-init_chunk_5DCYIWCG();
+init_chunk_RUC3LXDX();
+init_chunk_E76SLJJ3();
 init_chunk_JGBH2EPB();
 init_chunk_35BIJBXD();
 
@@ -83574,7 +83574,7 @@ for (i = 0; i < 256; i++) {
 }
 var i;
 
-// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/chunk-RIIYZIXM.js
+// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/chunk-WH2VEITL.js
 __toESM(require_json_stable_stringify(), 1);
 __toESM(require_json_stable_stringify(), 1);
 
@@ -83694,7 +83694,7 @@ function createMessage(message, code) {
   return message.length ? `[${codeToString(code)}] ${message}` : `[${codeToString(code)}]`;
 }
 
-// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/chunk-RIIYZIXM.js
+// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/chunk-WH2VEITL.js
 var import_base64_js = __toESM(require_base64_js(), 1);
 var import_json_stable_stringify3 = __toESM(require_json_stable_stringify(), 1);
 
@@ -86107,13 +86107,13 @@ createMessageType(TxRaw);
 ]);
 
 // ../../node_modules/@akashnetwork/chain-sdk/dist/esm/index.js
-init_chunk_VRE72ZD5();
+init_chunk_M2ZK7HEC();
 init_chunk_XIHNXIBW();
 init_chunk_2NTJ26VF();
 
-// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/chunk-Z5KZUB7X.js
+// ../../node_modules/@akashnetwork/chain-sdk/dist/esm/chunk-VG4MSYO3.js
 init_chunk_ZG2HL3EK();
-init_chunk_JISXXX24();
+init_chunk_FXRP7A3E();
 init_chunk_CVQBDXFP();
 init_chunk_OHAEKHAC();
 init_chunk_35BIJBXD();
@@ -86122,13 +86122,13 @@ init_chunk_35BIJBXD();
 init_chunk_JVVKYOWN();
 init_chunk_FDDF54PA();
 init_chunk_ZG2HL3EK();
-init_chunk_JISXXX24();
-init_chunk_XFCN5LRY();
+init_chunk_FXRP7A3E();
+init_chunk_H5WUFEMM();
 init_chunk_CVQBDXFP();
 init_chunk_OHAEKHAC();
-init_chunk_5YECXI3P();
-init_chunk_5DCYIWCG();
-init_chunk_CT7AHZAH();
+init_chunk_RUC3LXDX();
+init_chunk_E76SLJJ3();
+init_chunk_BNXSING3();
 init_chunk_HAJWJBJS();
 init_chunk_NX2OO5DC();
 init_chunk_GEEFQK3U();
@@ -86203,6 +86203,69 @@ async function getLeaseStatus(input) {
   }
   return await response.json();
 }
+
+// src/rpc-failover.ts
+var DEFAULT_RPC_ENDPOINTS = [
+  "https://rpc.akt.dev",
+  "https://akash-rpc.polkachu.com",
+  "https://rpc.akash.bronbro.io",
+  "https://akash-rpc.publicnode.com",
+  "https://rpc-akash.ecostake.com",
+  "https://rpc.akashnet.net"
+];
+var NODE_INFO_PATH = "/cosmos/base/tendermint/v1beta1/node_info";
+async function resolveHealthyEndpoints(endpoints, options = {}) {
+  const list = parseEndpoints(endpoints);
+  const timeoutMs = options.timeout ?? 5e3;
+  const fetchFn = options.fetch ?? globalThis.fetch;
+  const logger = options.logger ?? console;
+  for (const base of list) {
+    const trimmed = base.replace(/\/+$/, "");
+    const restWithSuffix = `${trimmed}/rest`;
+    if (await isHealthy(restWithSuffix, timeoutMs, fetchFn)) {
+      const rpcUrl = deriveRpcUrl(trimmed);
+      logger.info(`RPC failover: using ${trimmed} (REST at ${restWithSuffix})`);
+      return { restUrl: restWithSuffix, rpcUrl };
+    }
+    if (await isHealthy(trimmed, timeoutMs, fetchFn)) {
+      const rpcUrl = deriveRpcUrl(trimmed);
+      logger.info(`RPC failover: using ${trimmed} (REST at root)`);
+      return { restUrl: trimmed, rpcUrl };
+    }
+    logger.info(`RPC failover: ${trimmed} \u2014 unreachable`);
+  }
+  throw new Error(
+    `All Akash RPC endpoints unreachable. Tried: ${list.join(", ")}`
+  );
+}
+function parseEndpoints(input) {
+  if (Array.isArray(input)) return input.map((s) => s.trim()).filter(Boolean);
+  return input.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
+}
+function parseProviders(input) {
+  const list = Array.isArray(input) ? input : input.split(/[\n,]+/);
+  return list.map((s) => s.trim()).filter((s) => s.startsWith("akash1"));
+}
+async function isHealthy(restBase, timeoutMs, fetchFn) {
+  try {
+    const res = await fetchFn(`${restBase}${NODE_INFO_PATH}`, {
+      signal: AbortSignal.timeout(timeoutMs)
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+function deriveRpcUrl(base) {
+  const url = new URL(base);
+  if (url.port) {
+    return `${base}/rpc`;
+  }
+  if (url.protocol === "https:") {
+    return `${url.origin.replace(/:443$/, "")}:443/rpc`;
+  }
+  return `${base}/rpc`;
+}
 /*! Bundled license information:
 
 long/index.js:
@@ -86272,8 +86335,12 @@ js-yaml/dist/js-yaml.mjs:
   (*! js-yaml 4.1.1 https://github.com/nodeca/js-yaml @license MIT *)
 */
 
+exports.DEFAULT_RPC_ENDPOINTS = DEFAULT_RPC_ENDPOINTS;
 exports.generateToken = generateToken;
 exports.getLeaseStatus = getLeaseStatus;
+exports.parseEndpoints = parseEndpoints;
+exports.parseProviders = parseProviders;
+exports.resolveHealthyEndpoints = resolveHealthyEndpoints;
 exports.sendManifest = sendManifest;
 //# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map

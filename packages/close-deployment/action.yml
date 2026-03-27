@@ -35,15 +35,20 @@ inputs:
     required: false
     default: 'uakt'
 
-  rest-url:
-    description: 'REST API URL for querying the Akash network'
+  rpc-endpoints:
+    description: |
+      Newline or comma-separated list of Akash RPC base URLs for failover.
+      The action health-checks each in order and uses the first that responds.
+      Default: 6 well-known public endpoints (rpc.akt.dev, polkachu, bronbro, publicnode, ecostake, akashnet).
     required: false
-    default: 'https://rpc.akt.dev/rest'
+
+  rest-url:
+    description: '[Deprecated — use rpc-endpoints] REST API URL override. Skips failover when set.'
+    required: false
 
   tx-rpc-url:
-    description: 'RPC URL for submitting transactions'
+    description: '[Deprecated — use rpc-endpoints] RPC URL override. Skips failover when set.'
     required: false
-    default: 'https://rpc.akt.dev/rpc'
 
 outputs:
   deployment-id:
