@@ -10,7 +10,7 @@ This GitHub Action closes one or more deployments on the Akash Network. Deployme
   with:
     mnemonic: ${{ secrets.AKASH_MNEMONIC }}
     filter: |
-      dseq: 12345
+      dseq: "12345"
 ```
 
 ## Inputs
@@ -40,7 +40,7 @@ provider loss. Lease enumeration and provider status are consulted only when a
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `dseq` | `number` | Close only the deployment with this sequence number |
+| `dseq` | quoted canonical decimal string | Close only the deployment with this sequence number |
 | `lease` | `object` | MongoDB-style condition object applied to each lease — only leases that match are closed. See https://www.npmjs.com/package/@ucast/mongo2js |
 
 ### Lease filter fields
@@ -61,7 +61,7 @@ Standard MongoDB query operators (`$eq`, `$gt`, `$in`, `$and`, `$or`, etc.) are 
 ```yaml
 # Close a specific deployment by dseq
 filter: |
-  dseq: 12345
+  dseq: "12345"
 ```
 
 ```yaml
@@ -74,7 +74,7 @@ filter: |
 ```yaml
 # Close a specific deployment, only if its lease is still active
 filter: |
-  dseq: 12345
+  dseq: "12345"
   lease:
     state: active
 ```
@@ -121,7 +121,7 @@ jobs:
         with:
           mnemonic: ${{ secrets.AKASH_MNEMONIC }}
           filter: |
-            dseq: ${{ github.event.inputs.dseq }}
+            dseq: "${{ github.event.inputs.dseq }}"
 ```
 
 ### Close preview environment on PR close
@@ -148,7 +148,7 @@ jobs:
         with:
           mnemonic: ${{ secrets.AKASH_MNEMONIC }}
           filter: |
-            dseq: ${{ steps.get-dseq.outputs.dseq }}
+            dseq: "${{ steps.get-dseq.outputs.dseq }}"
             lease:
               state: active
 ```
@@ -181,7 +181,7 @@ with:
   mnemonic: ${{ secrets.AKASH_MNEMONIC }}
   expected-owner: ${{ needs.provision.outputs.owner }}
   filter: |
-    dseq: ${{ needs.provision.outputs.dseq }}
+    dseq: "${{ needs.provision.outputs.dseq }}"
 ```
 
 3. **Use environment protection**: Consider using GitHub Environments with required reviewers for production deployments.
@@ -194,7 +194,7 @@ By default, the action connects to the Akash mainnet. You can configure custom e
 with:
   mnemonic: ${{ secrets.AKASH_MNEMONIC }}
   filter: |
-    dseq: 12345
+    dseq: "12345"
   rest-url: 'https://custom-rest.akash.network'
   tx-rpc-url: 'https://custom-rpc.akash.network'
 ```

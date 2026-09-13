@@ -12,7 +12,7 @@ inputs:
     required: true
 
   filter:
-    description: 'Filter to select deployments to close'
+    description: 'Filter to select deployments to close. DSEQ values must be quoted canonical decimal strings.'
     required: true
 
   expected-owner:

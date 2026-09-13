@@ -262392,7 +262392,15 @@ async function resolveRpc() {
   const endpoints = endpointsInput ? (0, import_actions_utils2.parseEndpoints)(endpointsInput) : [...import_actions_utils2.DEFAULT_RPC_ENDPOINTS];
   return (0, import_actions_utils2.resolveHealthyEndpoints)(endpoints, { logger: core_exports });
 }
-async function getInputs() {
+async function resolveInputEndpoints(inputs) {
+  const rpc = await resolveRpc();
+  return {
+    ...inputs,
+    queryRestUrl: rpc.restUrl,
+    txRpcUrl: rpc.rpcUrl
+  };
+}
+async function getInputs(options = {}) {
   const mnemonic = getInput("mnemonic", { required: true });
   const expectedOwner = getInput("expected-owner") || void 0;
   const gas = getInput("gas") || "auto";
@@ -262400,19 +262408,19 @@ async function getInputs() {
   const fee = getInput("fee") || "";
   const denom = getInput("denom") || "uakt";
   const { deploymentFilter, leaseFilter } = parseFilter(getInput("filter", { required: true }));
-  const rpc = await resolveRpc();
-  return {
+  const inputs = {
     mnemonic,
     expectedOwner,
     gas,
     gasMultiplier,
     fee,
     denom,
-    queryRestUrl: rpc.restUrl,
-    txRpcUrl: rpc.rpcUrl,
+    queryRestUrl: "",
+    txRpcUrl: "",
     deploymentFilter,
     leaseFilter
   };
+  return options.resolveEndpoints === false ? inputs : resolveInputEndpoints(inputs);
 }
 function parseFilter(filter) {
   if (filter === "all") return { deploymentFilter: {} };
@@ -262438,8 +262446,16 @@ function varlidateFilter(rawFilter) {
   if ("owner" in filter) {
     throw new Error(`"owner" must be passed through the "expected-owner" input, not the filter`);
   }
-  if (filter.dseq !== void 0 && typeof filter.dseq !== "string" && typeof filter.dseq !== "number") {
-    throw new Error(`"dseq" filter must be a string or number if provided`);
+  if (filter.dseq !== void 0) {
+    if (typeof filter.dseq !== "string") {
+      throw new Error(`"dseq" filter must be a quoted canonical decimal string`);
+    }
+    if (!/^[1-9][0-9]*$/.test(filter.dseq)) {
+      throw new Error(`"dseq" filter must be a positive canonical decimal`);
+    }
+    if (BigInt(filter.dseq) > 18446744073709551615n) {
+      throw new Error(`"dseq" filter exceeds uint64`);
+    }
   }
   if (filter.lease && typeof filter.lease !== "object") {
     throw new Error(`"lease" filter must be an object if provided`);
@@ -262450,11 +262466,14 @@ function varlidateFilter(rawFilter) {
 // src/index.ts
 async function run() {
   try {
-    const inputs = await getInputs();
+    let inputs = await getInputs({ resolveEndpoints: false });
     info("Initializing wallet...");
     const wallet = await import_proto_signing2.DirectSecp256k1HdWallet.fromMnemonic(inputs.mnemonic, {
       prefix: "akash"
     });
+    const [account] = await wallet.getAccounts();
+    assertExpectedOwner(inputs.expectedOwner, account.address);
+    inputs = await resolveInputEndpoints(inputs);
     info("Connecting to Akash network...");
     const sdk = createChainNodeWebSDK({
       query: {
@@ -262478,7 +262497,7 @@ async function run() {
     }
   }
 }
-run();
+var runPromise = run();
 /*! Bundled license information:
 
 long/index.js:
@@ -262621,3 +262640,6 @@ jsrsasign/lib/jsrsasign.js:
 js-yaml/dist/js-yaml.mjs:
   (*! js-yaml 4.1.1 https://github.com/nodeca/js-yaml @license MIT *)
 */
+
+exports.run = run;
+exports.runPromise = runPromise;

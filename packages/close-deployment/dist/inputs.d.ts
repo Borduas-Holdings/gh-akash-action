@@ -23,5 +23,8 @@ export interface ActionInputs {
     queryRestUrl: string;
     txRpcUrl: string;
 }
-export declare function getInputs(): Promise<ActionInputs>;
+export declare function resolveInputEndpoints(inputs: ActionInputs): Promise<ActionInputs>;
+export declare function getInputs(options?: {
+    resolveEndpoints?: boolean;
+}): Promise<ActionInputs>;
 //# sourceMappingURL=inputs.d.ts.map
