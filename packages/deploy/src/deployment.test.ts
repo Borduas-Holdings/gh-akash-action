@@ -328,19 +328,19 @@ describe(createDeployment.name, () => {
   });
 
   it("reports failed receipt publication after create and attempts every recovery output", async () => {
-    const { sdk, wallet, inputs, generateToken } = await setup();
+    const { sdk, wallet, inputs, generateToken, ownerAddress } = await setup();
     const logger = mock<Logger>();
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), "akash-receipt-publication-failure-"));
-    const blockedParent = path.join(directory, "not-a-directory");
-    fs.writeFileSync(blockedParent, "blocks receipt parent creation", "utf-8");
-    const outputAttempts: string[] = [];
+    const receiptPath = path.join(directory, "receipt.json");
+    const blockedTempPath = `${receiptPath}.tmp-${process.pid}`;
+    fs.mkdirSync(blockedTempPath);
+    const outputAttempts: [string, string][] = [];
     const publishReceipt = (deploymentId: { owner: string; dseq: string }) => {
       publishDeploymentReceipt(
         deploymentId,
-        path.join(blockedParent, "receipt.json"),
-        (name) => {
-          outputAttempts.push(name);
-          throw new Error(`output ${name} unavailable`);
+        receiptPath,
+        (name, value) => {
+          outputAttempts.push([name, value]);
         },
       );
     };
@@ -355,7 +355,13 @@ describe(createDeployment.name, () => {
       ).rejects.toThrow("Deployment receipt publication was incomplete");
 
       expect(sdk.akash.deployment.v1beta4.createDeployment).toHaveBeenCalledOnce();
-      expect(outputAttempts).toEqual(["deployment-owner", "deployment-id", "dseq"]);
+      expect(outputAttempts).toEqual([
+        ["deployment-owner", ownerAddress],
+        ["deployment-id", `${ownerAddress}/12345`],
+        ["dseq", "12345"],
+      ]);
+      expect(fs.existsSync(receiptPath)).toBe(false);
+      expect(fs.statSync(blockedTempPath).isDirectory()).toBe(true);
       expect(sdk.akash.market.v1beta5.getBids).not.toHaveBeenCalled();
       expect(sdk.akash.deployment.v1beta4.closeDeployment).not.toHaveBeenCalled();
       expect(logger.error).toHaveBeenCalledWith(

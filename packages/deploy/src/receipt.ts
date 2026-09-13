@@ -59,8 +59,14 @@ export function publishDeploymentReceipt(
       failures.push(error instanceof Error ? error : new Error(String(error)));
       outPath = undefined;
     } finally {
-      if (fs.existsSync(tempPath)) {
-        fs.unlinkSync(tempPath);
+      try {
+        if (fs.existsSync(tempPath)) {
+          fs.unlinkSync(tempPath);
+        }
+      } catch (error) {
+        failures.push(
+          error instanceof Error ? error : new Error(String(error)),
+        );
       }
     }
     if (outPath) {

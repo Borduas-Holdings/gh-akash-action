@@ -144,12 +144,28 @@ describe("deploy action entry point", () => {
     mocks.createChainNodeWebSDK.mockReturnValue({
       akash: { market: { v1beta5: { getLeases: vi.fn().mockResolvedValue({ leases: [] }) } } },
     });
-    mocks.createDeployment.mockRejectedValue(new Error("replacement failed after create"));
+    mocks.createDeployment.mockImplementation(async (_sdk, _wallet, _inputs, options) => {
+      await options?.onDeploymentCreated?.(deploymentId);
+      throw new Error("replacement failed after create");
+    });
+
+    const original = await import("./index.ts");
+    await original.runPromise;
+
+    const receiptPath = (await mocks.getInputs.mock.results[0].value).deploymentReceiptPath;
+    expect(JSON.parse(fs.readFileSync(receiptPath, "utf-8"))).toEqual({
+      schema: "akash-gha-deployment-receipt/v1",
+      ...deploymentId,
+    });
+    expect(core.setOutput).toHaveBeenCalledWith("deployment-id", `${deploymentId.owner}/${deploymentId.dseq}`);
+    expect(core.setFailed).toHaveBeenCalledWith("replacement failed after create");
+
+    fs.rmSync(receiptPath);
+    vi.clearAllMocks();
 
     const module = await import(/* @vite-ignore */ mutantPath);
     await module.runPromise;
 
-    const receiptPath = (await mocks.getInputs.mock.results[0].value).deploymentReceiptPath;
     expect(fs.existsSync(receiptPath)).toBe(false);
     expect(core.setOutput).not.toHaveBeenCalledWith("deployment-id", expect.anything());
     expect(core.setFailed).toHaveBeenCalledWith("replacement failed after create");

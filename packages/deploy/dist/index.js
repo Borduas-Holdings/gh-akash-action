@@ -267442,8 +267442,14 @@ function publishDeploymentReceipt(deploymentId, receiptPath, setOutput2 = setOut
       failures.push(error2 instanceof Error ? error2 : new Error(String(error2)));
       outPath = void 0;
     } finally {
-      if (fs5__namespace.existsSync(tempPath)) {
-        fs5__namespace.unlinkSync(tempPath);
+      try {
+        if (fs5__namespace.existsSync(tempPath)) {
+          fs5__namespace.unlinkSync(tempPath);
+        }
+      } catch (error2) {
+        failures.push(
+          error2 instanceof Error ? error2 : new Error(String(error2))
+        );
       }
     }
     if (outPath) {
