@@ -6,9 +6,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { closeDeployment } from "../../close-deployment/src/close-deployment.js";
 
 const harness = vi.hoisted(() => ({
-  inputs: undefined as any,
-  outputs: new Map<string, string>(),
-  sdk: undefined as any,
+  inputs: undefined,
+  outputs: new Map(),
+  sdk: undefined,
   setFailed: vi.fn(),
 }));
 
@@ -17,11 +17,11 @@ vi.mock("@actions/core", () => ({
   info: vi.fn(),
   warning: vi.fn(),
   setFailed: harness.setFailed,
-  setOutput: vi.fn((name: string, value: string) => harness.outputs.set(name, String(value))),
+  setOutput: vi.fn((name, value) => harness.outputs.set(name, String(value))),
 }));
 vi.mock("@akashnetwork/chain-sdk", () => ({ createStargateClient: vi.fn(() => ({})) }));
 vi.mock("@akashnetwork/chain-sdk/web", async (importOriginal) => ({
-  ...(await importOriginal<Record<string, unknown>>()),
+  ...(await importOriginal()),
   createChainNodeWebSDK: vi.fn(() => harness.sdk),
 }));
 vi.mock("./inputs.ts", () => ({
@@ -61,7 +61,7 @@ deployment:
       count: 1
 `;
 
-async function settleWithTimers<T>(promise: Promise<T>): Promise<T> {
+async function settleWithTimers(promise) {
   let settled = false;
   promise.then(
     () => {
@@ -78,7 +78,7 @@ async function settleWithTimers<T>(promise: Promise<T>): Promise<T> {
 }
 
 describe("deploy action entry point to exact close", () => {
-  const directories: string[] = [];
+  const directories = [];
 
   afterEach(() => {
     vi.useRealTimers();
@@ -96,7 +96,7 @@ describe("deploy action entry point to exact close", () => {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), "akash-entrypoint-close-"));
     directories.push(directory);
     const receiptPath = path.join(directory, "receipt.json");
-    const closeBroadcast = vi.fn(async (_message: unknown, options: any) => {
+    const closeBroadcast = vi.fn(async (_message, options) => {
       options.afterBroadcast({ transactionHash: "CLOSE-TX" });
     });
     const getLeases = vi.fn(async () => ({ leases: [] }));
@@ -134,7 +134,7 @@ describe("deploy action entry point to exact close", () => {
     };
     harness.inputs = {
       mnemonic: wallet.mnemonic,
-      selectBid: (bids: unknown[]) => bids[0],
+      selectBid: (bids) => bids[0],
       sdl: SDL,
       gas: "auto",
       gasMultiplier: "1.5",
