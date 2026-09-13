@@ -267471,6 +267471,7 @@ async function run() {
       publishDeploymentReceipt(deploymentId, inputs.deploymentReceiptPath);
       receiptPublished = true;
     };
+    const createNewDeployment = () => createDeployment(sdk, wallet, inputs, { onDeploymentCreated: publishReceipt });
     let prevDseq;
     const existingDeploymentDetails = getExistingDeploymentDetails(inputs.deploymentDetailsPath);
     if (existingDeploymentDetails) {
@@ -267493,11 +267494,11 @@ async function run() {
       } else {
         info("Lease is no longer active \u2014 creating a new deployment...");
         prevDseq = existingDeploymentDetails.dseq;
-        result2 = await createDeployment(sdk, wallet, inputs, { onDeploymentCreated: publishReceipt });
+        result2 = await createNewDeployment();
       }
     } else {
       info("Creating a deployment on Akash Network...");
-      result2 = await createDeployment(sdk, wallet, inputs, { onDeploymentCreated: publishReceipt });
+      result2 = await createNewDeployment();
     }
     if (!receiptPublished) {
       publishReceipt(result2.deploymentId);
@@ -267541,7 +267542,7 @@ async function run() {
     }
   }
 }
-run();
+var runPromise = run();
 /*! Bundled license information:
 
 long/index.js:
@@ -267684,3 +267685,6 @@ hash-wasm/dist/index.esm.js:
 js-yaml/dist/js-yaml.mjs:
   (*! js-yaml 4.1.1 https://github.com/nodeca/js-yaml @license MIT *)
 */
+
+exports.run = run;
+exports.runPromise = runPromise;
