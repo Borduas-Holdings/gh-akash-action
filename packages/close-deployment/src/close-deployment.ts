@@ -49,66 +49,79 @@ export async function closeDeployment(
   });
 
   di.logger.info(`Found ${deploymentsResult.deployments.length} deployments matching filters`);
-  const leases = await Promise.all(deploymentsResult.deployments.map(async (deployment) => {
-    const deploymenLeases = await sdk.akash.market.v1beta5.getLeases({
-      filters: {
-        owner: account.address,
-        dseq: deployment.deployment?.id?.dseq,
-      }
-    });
-    const permissions: LeasePermission[] = [];
-    deploymenLeases.leases.map(lease => {
-      permissions.push({
-        access: "scoped",
-        provider: lease.lease?.id?.provider!,
-        scope: ["status"]
-      });
-    });
-    const token = await di.generateToken(wallet, () => ({
-      access: "granular",
-      permissions,
-    }));
+  let deploymentDseqs = deploymentsResult.deployments.map((deployment) => {
+    const dseq = deployment.deployment?.id?.dseq?.toString();
+    if (!dseq) {
+      throw new Error("Refusing to close deployment: query returned a deployment without a dseq");
+    }
+    return dseq;
+  });
 
-    return await Promise.all(deploymenLeases.leases.map(async (lease) => {
-      return {
-        dseq: lease?.lease?.id?.dseq?.toString() || "",
-        state: lease.lease?.state as unknown as DeploymentContext["state"],
-        status: await di.getLeaseStatus({
-          dseq: deployment.deployment?.id?.dseq?.toString() || "",
-          token,
-          providerHostUri: await di.getProviderHostUri(sdk, lease.lease?.id?.provider),
-        }),
-        provider: lease.lease?.id?.provider || "",
-        createdAt: lease.lease?.createdAt?.toString() || "",
-        closedOn: lease.lease?.closedOn?.toString(),
-        closedReason: lease.lease?.reason as DeploymentContext["closedReason"],
-      } satisfies DeploymentContext;
-    }));
-  }));
-  let allLeases = leases.flat();
-  di.logger.info(`Total leases found for deployments: ${allLeases.length}`);
-
+  // A DSEQ-only cleanup already has the complete on-chain close subject. Do not
+  // make that close depend on a lease existing or on its provider answering a
+  // status request: post-create bid failures have no lease, and provider failure
+  // is precisely when cleanup must remain available. Lease inspection is needed
+  // only when the caller explicitly supplied a lease predicate.
   if (inputs.leaseFilter) {
-    allLeases = inputs.leaseFilter ? allLeases.filter(inputs.leaseFilter) : allLeases;
-    di.logger.info(`Leases after applying lease filter: ${allLeases.length}`);
+    const leases = await Promise.all(deploymentsResult.deployments.map(async (deployment) => {
+      const deploymenLeases = await sdk.akash.market.v1beta5.getLeases({
+        filters: {
+          owner: account.address,
+          dseq: deployment.deployment?.id?.dseq,
+        }
+      });
+      const permissions: LeasePermission[] = [];
+      deploymenLeases.leases.map(lease => {
+        permissions.push({
+          access: "scoped",
+          provider: lease.lease?.id?.provider!,
+          scope: ["status"]
+        });
+      });
+      const token = await di.generateToken(wallet, () => ({
+        access: "granular",
+        permissions,
+      }));
+
+      return await Promise.all(deploymenLeases.leases.map(async (lease) => {
+        return {
+          dseq: lease?.lease?.id?.dseq?.toString() || "",
+          state: lease.lease?.state as unknown as DeploymentContext["state"],
+          status: await di.getLeaseStatus({
+            dseq: deployment.deployment?.id?.dseq?.toString() || "",
+            token,
+            providerHostUri: await di.getProviderHostUri(sdk, lease.lease?.id?.provider),
+          }),
+          provider: lease.lease?.id?.provider || "",
+          createdAt: lease.lease?.createdAt?.toString() || "",
+          closedOn: lease.lease?.closedOn?.toString(),
+          closedReason: lease.lease?.reason as DeploymentContext["closedReason"],
+        } satisfies DeploymentContext;
+      }));
+    }));
+    const allLeases = leases.flat();
+    di.logger.info(`Total leases found for deployments: ${allLeases.length}`);
+    const matchingLeases = allLeases.filter(inputs.leaseFilter);
+    di.logger.info(`Leases after applying lease filter: ${matchingLeases.length}`);
+    deploymentDseqs = [...new Set(matchingLeases.map(lease => lease.dseq))];
   }
 
   const txOptions = buildTxOptions(inputs, "Deployment closed via GitHub Action");
   const results: CloseDeploymentResult[] = [];
-  for (const lease of allLeases) {
-    di.logger.info(`Closing deployment ${lease.dseq} with lease status: ${lease.state}`);
+  for (const dseq of deploymentDseqs) {
+    di.logger.info(`Closing deployment ${dseq}`);
     const deploymentId = {
       owner: account.address,
-      dseq: lease.dseq,
+      dseq,
     };
 
     await sdk.akash.deployment.v1beta4.closeDeployment({ id: deploymentId }, {
       ...txOptions,
       afterBroadcast(tx) {
-        results.push({ dseq: lease.dseq, txHash: tx.transactionHash });
+        results.push({ dseq, txHash: tx.transactionHash });
       },
     });
-    di.logger.info(`Deployment ${lease.dseq} has been closed successfully!`);
+    di.logger.info(`Deployment ${dseq} has been closed successfully!`);
   }
 
   return results;

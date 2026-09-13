@@ -31,6 +31,11 @@ This GitHub Action closes one or more deployments on the Akash Network. Deployme
 
 The `filter` input is a required YAML string. At least one top-level field must be provided. All matching active deployments owned by the wallet are closed.
 
+A DSEQ-only filter closes the matching deployment directly. It does not require
+a lease to exist or contact a provider, so it remains usable after bid failure or
+provider loss. Lease enumeration and provider status are consulted only when a
+`lease` predicate is explicitly present.
+
 ### Top-level fields
 
 | Field | Type | Description |

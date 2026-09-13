@@ -68,7 +68,7 @@ describe(closeDeployment.name, () => {
     expect(fixture.sdk.akash.deployment.v1beta4.closeDeployment).not.toHaveBeenCalled();
   });
 
-  it("returns empty array when no leases found for a deployment", async () => {
+  it("closes an exact deployment when post-create failure left no lease", async () => {
     const { sdk, wallet, inputs, options } = await setup({
       deployments: [{ dseq: "12345" }],
       leases: [],
@@ -76,8 +76,24 @@ describe(closeDeployment.name, () => {
 
     const result = await closeDeployment(sdk, wallet, inputs, options);
 
-    expect(result).toEqual([]);
-    expect(sdk.akash.deployment.v1beta4.closeDeployment).not.toHaveBeenCalled();
+    expect(result).toEqual([{ dseq: "12345", txHash: undefined }]);
+    expect(sdk.akash.deployment.v1beta4.closeDeployment).toHaveBeenCalledTimes(1);
+    expect(sdk.akash.market.v1beta5.getLeases).not.toHaveBeenCalled();
+    expect(options.getLeaseStatus).not.toHaveBeenCalled();
+  });
+
+  it("does not require provider status for an exact DSEQ-only cleanup", async () => {
+    const { sdk, wallet, inputs, options } = await setup({
+      deployments: [{ dseq: "12345" }],
+      leases: [{ dseq: "12345", provider: "akash1unreachableprovider" }],
+    });
+    options.getLeaseStatus.mockRejectedValue(new Error("provider unavailable"));
+
+    const result = await closeDeployment(sdk, wallet, inputs, options);
+
+    expect(result).toHaveLength(1);
+    expect(sdk.akash.deployment.v1beta4.closeDeployment).toHaveBeenCalledTimes(1);
+    expect(options.getLeaseStatus).not.toHaveBeenCalled();
   });
 
   it("closes deployment and returns result with dseq", async () => {
@@ -216,6 +232,24 @@ describe(closeDeployment.name, () => {
     expect(result.map((r) => r.dseq)).toEqual(expect.arrayContaining(["11111", "22222"]));
   });
 
+  it("closes a deployment once when multiple leases satisfy an explicit lease filter", async () => {
+    const { sdk, wallet, inputs, options } = await setup({
+      deployments: [{ dseq: "12345" }],
+      leases: [
+        { dseq: "12345", provider: "akash1provider1", state: "active" },
+        { dseq: "12345", provider: "akash1provider2", state: "active" },
+      ],
+      inputOverrides: {
+        leaseFilter: (lease: DeploymentContext) => lease.state === "active",
+      },
+    });
+
+    const result = await closeDeployment(sdk, wallet, inputs, options);
+
+    expect(result).toHaveLength(1);
+    expect(sdk.akash.deployment.v1beta4.closeDeployment).toHaveBeenCalledTimes(1);
+  });
+
   it("fetches deployments with owner address merged into deployment filter", async () => {
     const { sdk, wallet, inputs, ownerAddress, options } = await setup({
       deployments: [{ dseq: "12345" }],
@@ -233,6 +267,9 @@ describe(closeDeployment.name, () => {
     const { sdk, wallet, inputs, ownerAddress, options } = await setup({
       deployments: [{ dseq: "12345" }],
       leases: [{ dseq: "12345", provider: "akash1provider1" }],
+      inputOverrides: {
+        leaseFilter: () => true,
+      },
     });
 
     await closeDeployment(sdk, wallet, inputs, options);
@@ -240,6 +277,21 @@ describe(closeDeployment.name, () => {
     expect(sdk.akash.market.v1beta5.getLeases).toHaveBeenCalledWith({
       filters: { owner: ownerAddress, dseq: "12345" },
     });
+  });
+
+  it("skips every lease and provider dependency when no lease filter was requested", async () => {
+    const { sdk, wallet, inputs, options } = await setup({
+      deployments: [{ dseq: "12345" }],
+      leases: [{ dseq: "12345", provider: "akash1provider1" }],
+    });
+
+    await closeDeployment(sdk, wallet, inputs, options);
+
+    expect(sdk.akash.market.v1beta5.getLeases).not.toHaveBeenCalled();
+    expect(options.generateToken).not.toHaveBeenCalled();
+    expect(options.getProviderHostUri).not.toHaveBeenCalled();
+    expect(options.getLeaseStatus).not.toHaveBeenCalled();
+    expect(sdk.akash.deployment.v1beta4.closeDeployment).toHaveBeenCalledTimes(1);
   });
 
   it("calls getProviderHostUri for each lease with its provider address", async () => {
@@ -250,6 +302,10 @@ describe(closeDeployment.name, () => {
         { dseq: "11111", provider: sharedProvider },
         { dseq: "22222", provider: sharedProvider },
       ],
+      inputOverrides: {
+        deploymentFilter: {},
+        leaseFilter: () => true,
+      },
     });
 
     await closeDeployment(sdk, wallet, inputs, options);
@@ -262,6 +318,9 @@ describe(closeDeployment.name, () => {
     const { sdk, wallet, inputs, options } = await setup({
       deployments: [{ dseq: "12345" }],
       leases: [{ dseq: "12345", provider: "akash1provider1" }],
+      inputOverrides: {
+        leaseFilter: () => true,
+      },
     });
 
     await closeDeployment(sdk, wallet, inputs, options);
@@ -274,6 +333,9 @@ describe(closeDeployment.name, () => {
     const { sdk, wallet, inputs, options } = await setup({
       deployments: [{ dseq: "12345" }],
       leases: [{ dseq: "12345", provider: "akash1provider1" }],
+      inputOverrides: {
+        leaseFilter: () => true,
+      },
     });
 
     await closeDeployment(sdk, wallet, inputs, options);
