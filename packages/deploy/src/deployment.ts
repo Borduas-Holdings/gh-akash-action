@@ -117,9 +117,8 @@ export async function createDeployment(sdk: ChainSDK, wallet: DirectSecp256k1HdW
   // its exact owner/dseq before bid selection, lease creation, manifest submission,
   // or status inspection can fail. The caller deliberately owns cleanup; this action
   // must never infer a broader selector or destroy the deployment internally.
-  await options?.onDeploymentCreated?.(result.deploymentId);
-
   try {
+    await options?.onDeploymentCreated?.(result.deploymentId);
     logger.info("Waiting for providers to create bids...");
     const selectedBid = await waitForBid(sdk, deploymentId, inputs.leaseTimeout, inputs.selectBid, logger);
 

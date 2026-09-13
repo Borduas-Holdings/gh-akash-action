@@ -266616,8 +266616,8 @@ async function createDeployment(sdk, wallet, inputs, options) {
     },
     isNew: true
   };
-  await options?.onDeploymentCreated?.(result2.deploymentId);
   try {
+    await options?.onDeploymentCreated?.(result2.deploymentId);
     logger.info("Waiting for providers to create bids...");
     const selectedBid = await waitForBid(sdk, deploymentId, inputs.leaseTimeout, inputs.selectBid, logger);
     logger.info(

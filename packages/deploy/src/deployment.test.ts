@@ -8,6 +8,7 @@ import * as path from "node:path";
 import { mock, mockDeep } from "vitest-mock-extended";
 import { createDeployment, getExistingDeploymentDetails, updateDeploymentManifest, waitForBid, type Logger, type StoredDeploymentDetails } from "./deployment.js";
 import type { ActionInputs, JsonResponse } from "./inputs.js";
+import { publishDeploymentReceipt } from "./receipt.js";
 
 type ChainSDK = ReturnType<typeof createChainNodeWebSDK>;
 const realSetTimeout = globalThis.setTimeout;
@@ -324,6 +325,48 @@ describe(createDeployment.name, () => {
     expect(onDeploymentCreated).toHaveBeenCalledWith({ owner: ownerAddress, dseq: "12345" });
     expect(events.slice(0, 3)).toEqual(["create-broadcast", "publish-receipt", "bid-query"]);
     expect(sdk.akash.deployment.v1beta4.closeDeployment).not.toHaveBeenCalled();
+  });
+
+  it("reports failed receipt publication after create and attempts every recovery output", async () => {
+    const { sdk, wallet, inputs, generateToken } = await setup();
+    const logger = mock<Logger>();
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "akash-receipt-publication-failure-"));
+    const blockedParent = path.join(directory, "not-a-directory");
+    fs.writeFileSync(blockedParent, "blocks receipt parent creation", "utf-8");
+    const outputAttempts: string[] = [];
+    const publishReceipt = (deploymentId: { owner: string; dseq: string }) => {
+      publishDeploymentReceipt(
+        deploymentId,
+        path.join(blockedParent, "receipt.json"),
+        (name) => {
+          outputAttempts.push(name);
+          throw new Error(`output ${name} unavailable`);
+        },
+      );
+    };
+
+    try {
+      await expect(
+        createDeployment(sdk, wallet, inputs, {
+          logger,
+          generateToken,
+          onDeploymentCreated: publishReceipt,
+        }),
+      ).rejects.toThrow("Deployment receipt publication was incomplete");
+
+      expect(sdk.akash.deployment.v1beta4.createDeployment).toHaveBeenCalledOnce();
+      expect(outputAttempts).toEqual(["deployment-owner", "deployment-id", "dseq"]);
+      expect(sdk.akash.market.v1beta5.getBids).not.toHaveBeenCalled();
+      expect(sdk.akash.deployment.v1beta4.closeDeployment).not.toHaveBeenCalled();
+      expect(logger.error).toHaveBeenCalledWith(
+        "Deployment failed: Deployment receipt publication was incomplete",
+      );
+      expect(logger.warning).toHaveBeenCalledWith(
+        "Deployment was NOT auto-closed. Use close-deployment action to clean up if needed.",
+      );
+    } finally {
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
   });
 
   it.each(["bid", "lease", "manifest", "status"] as const)(
