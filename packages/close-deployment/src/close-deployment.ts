@@ -38,24 +38,40 @@ export async function closeDeployment(
   di.assertExpectedOwner(inputs.expectedOwner, account.address);
   di.logger.info(`Using account: ${account.address}`);
 
-  const deploymentFilters = {
-    ...inputs.deploymentFilter,
-    owner: account.address,
-  };
+  const exactDseq = inputs.deploymentFilter.dseq?.toString();
+  let deployments: Awaited<ReturnType<typeof sdk.akash.deployment.v1beta4.getDeployments>>["deployments"] = [];
+  let deploymentDseqs: string[];
 
-  di.logger.info(`Fetching deployments with filters: ${JSON.stringify(deploymentFilters)}`);
-  const deploymentsResult = await sdk.akash.deployment.v1beta4.getDeployments({
-    filters: deploymentFilters
-  });
-
-  di.logger.info(`Found ${deploymentsResult.deployments.length} deployments matching filters`);
-  let deploymentDseqs = [...new Set(deploymentsResult.deployments.map((deployment) => {
-    const dseq = deployment.deployment?.id?.dseq?.toString();
-    if (!dseq) {
-      throw new Error("Refusing to close deployment: query returned a deployment without a dseq");
+  if (exactDseq && !inputs.leaseFilter) {
+    if (!/^[1-9][0-9]*$/.test(exactDseq)) {
+      throw new Error("Refusing to close deployment: dseq is not a positive canonical decimal");
     }
-    return dseq;
-  }))];
+    // The verified signer plus an exact DSEQ is the complete MsgCloseDeployment
+    // subject. Broadcast it directly: the just-created deployment may not be
+    // visible through a REST index yet, and REST availability must not gate a
+    // transaction sent through the independent RPC endpoint.
+    deploymentDseqs = [exactDseq];
+  } else {
+    const deploymentFilters = {
+      ...inputs.deploymentFilter,
+      owner: account.address,
+    };
+
+    di.logger.info(`Fetching deployments with filters: ${JSON.stringify(deploymentFilters)}`);
+    const deploymentsResult = await sdk.akash.deployment.v1beta4.getDeployments({
+      filters: deploymentFilters
+    });
+    deployments = deploymentsResult.deployments;
+
+    di.logger.info(`Found ${deployments.length} deployments matching filters`);
+    deploymentDseqs = [...new Set(deployments.map((deployment) => {
+      const dseq = deployment.deployment?.id?.dseq?.toString();
+      if (!dseq) {
+        throw new Error("Refusing to close deployment: query returned a deployment without a dseq");
+      }
+      return dseq;
+    }))];
+  }
 
   // A DSEQ-only cleanup already has the complete on-chain close subject. Do not
   // make that close depend on a lease existing or on its provider answering a
@@ -63,7 +79,7 @@ export async function closeDeployment(
   // is precisely when cleanup must remain available. Lease inspection is needed
   // only when the caller explicitly supplied a lease predicate.
   if (inputs.leaseFilter) {
-    const leases = await Promise.all(deploymentsResult.deployments.map(async (deployment) => {
+    const leases = await Promise.all(deployments.map(async (deployment) => {
       const deploymenLeases = await sdk.akash.market.v1beta5.getLeases({
         filters: {
           owner: account.address,

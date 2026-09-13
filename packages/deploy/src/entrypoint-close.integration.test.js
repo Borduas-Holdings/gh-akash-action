@@ -108,6 +108,9 @@ describe("deploy action entry point to exact close", () => {
     });
     const getLeases = vi.fn(async () => ({ leases: [] }));
     const getProvider = vi.fn();
+    const getDeployments = vi.fn(async () => {
+      throw new Error("REST index unavailable");
+    });
     harness.sdk = {
       cosmos: {
         base: {
@@ -122,9 +125,7 @@ describe("deploy action entry point to exact close", () => {
         deployment: {
           v1beta4: {
             createDeployment: vi.fn(async () => undefined),
-            getDeployments: vi.fn(async () => ({
-              deployments: [{ deployment: { id: { owner: account.address, dseq: "12345" } } }],
-            })),
+            getDeployments,
             closeDeployment: closeBroadcast,
           },
         },
@@ -214,6 +215,7 @@ describe("deploy action entry point to exact close", () => {
       expect.any(Object),
     );
     expect(getLeases).toHaveBeenCalledTimes(branch === "replacement" ? 1 : 0);
+    expect(getDeployments).not.toHaveBeenCalled();
     expect(generateToken).not.toHaveBeenCalled();
     expect(getProvider).not.toHaveBeenCalled();
     expect(getProviderHostUri).not.toHaveBeenCalled();

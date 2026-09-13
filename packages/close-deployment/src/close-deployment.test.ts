@@ -10,7 +10,10 @@ type ChainSDK = ReturnType<typeof createChainNodeWebSDK>;
 
 describe(closeDeployment.name, () => {
   it("returns empty array when no deployments match filters", async () => {
-    const { sdk, wallet, inputs, options } = await setup({ deployments: [] });
+    const { sdk, wallet, inputs, options } = await setup({
+      deployments: [],
+      inputOverrides: { deploymentFilter: {} },
+    });
 
     const result = await closeDeployment(sdk, wallet, inputs, options);
 
@@ -31,6 +34,9 @@ describe(closeDeployment.name, () => {
 
     expect(sdk.akash.deployment.v1beta4.getDeployments).not.toHaveBeenCalled();
     expect(sdk.akash.market.v1beta5.getLeases).not.toHaveBeenCalled();
+    expect(options.generateToken).not.toHaveBeenCalled();
+    expect(options.getProviderHostUri).not.toHaveBeenCalled();
+    expect(options.getLeaseStatus).not.toHaveBeenCalled();
     expect(sdk.akash.deployment.v1beta4.closeDeployment).not.toHaveBeenCalled();
   });
 
@@ -70,7 +76,7 @@ describe(closeDeployment.name, () => {
 
   it("closes an exact deployment when post-create failure left no lease", async () => {
     const { sdk, wallet, inputs, options } = await setup({
-      deployments: [{ dseq: "12345" }],
+      deployments: [],
       leases: [],
     });
 
@@ -78,7 +84,23 @@ describe(closeDeployment.name, () => {
 
     expect(result).toEqual([{ dseq: "12345", txHash: undefined }]);
     expect(sdk.akash.deployment.v1beta4.closeDeployment).toHaveBeenCalledTimes(1);
+    expect(sdk.akash.deployment.v1beta4.getDeployments).not.toHaveBeenCalled();
     expect(sdk.akash.market.v1beta5.getLeases).not.toHaveBeenCalled();
+    expect(options.getLeaseStatus).not.toHaveBeenCalled();
+  });
+
+  it("broadcasts an exact close when deployment enumeration would fail", async () => {
+    const { sdk, wallet, inputs, options } = await setup({ deployments: [] });
+    sdk.akash.deployment.v1beta4.getDeployments.mockRejectedValue(new Error("REST index unavailable"));
+
+    const result = await closeDeployment(sdk, wallet, inputs, options);
+
+    expect(result).toHaveLength(1);
+    expect(sdk.akash.deployment.v1beta4.getDeployments).not.toHaveBeenCalled();
+    expect(sdk.akash.deployment.v1beta4.closeDeployment).toHaveBeenCalledTimes(1);
+    expect(sdk.akash.market.v1beta5.getLeases).not.toHaveBeenCalled();
+    expect(options.generateToken).not.toHaveBeenCalled();
+    expect(options.getProviderHostUri).not.toHaveBeenCalled();
     expect(options.getLeaseStatus).not.toHaveBeenCalled();
   });
 
@@ -92,6 +114,7 @@ describe(closeDeployment.name, () => {
 
     expect(result).toHaveLength(1);
     expect(sdk.akash.deployment.v1beta4.closeDeployment).toHaveBeenCalledTimes(1);
+    expect(sdk.akash.deployment.v1beta4.getDeployments).not.toHaveBeenCalled();
     expect(sdk.akash.market.v1beta5.getLeases).not.toHaveBeenCalled();
   });
 
@@ -229,13 +252,14 @@ describe(closeDeployment.name, () => {
     expect(sdk.akash.deployment.v1beta4.closeDeployment).toHaveBeenCalledTimes(1);
   });
 
-  it("closes all leases across multiple deployments", async () => {
+  it("closes all deployments selected by non-exact enumeration", async () => {
     const { sdk, wallet, inputs, options } = await setup({
       deployments: [{ dseq: "11111" }, { dseq: "22222" }],
       leases: [
         { dseq: "11111", provider: "akash1provider1" },
         { dseq: "22222", provider: "akash1provider2" },
       ],
+      inputOverrides: { deploymentFilter: {} },
     });
 
     const result = await closeDeployment(sdk, wallet, inputs, options);
@@ -267,6 +291,7 @@ describe(closeDeployment.name, () => {
     const { sdk, wallet, inputs, ownerAddress, options } = await setup({
       deployments: [{ dseq: "12345" }],
       leases: [{ dseq: "12345", provider: "akash1provider1" }],
+      inputOverrides: { leaseFilter: () => true },
     });
 
     await closeDeployment(sdk, wallet, inputs, options);

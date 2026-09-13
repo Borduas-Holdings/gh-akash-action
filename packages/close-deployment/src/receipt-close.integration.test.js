@@ -78,6 +78,9 @@ describe("real deploy create to exact close", () => {
     });
     const getLeases = vi.fn(async () => ({ leases: [] }));
     const getProvider = vi.fn();
+    const getDeployments = vi.fn(async () => {
+      throw new Error("REST index unavailable");
+    });
     const sdk = {
       cosmos: {
         base: {
@@ -92,9 +95,7 @@ describe("real deploy create to exact close", () => {
         deployment: {
           v1beta4: {
             createDeployment: vi.fn(async () => undefined),
-            getDeployments: vi.fn(async () => ({
-              deployments: [{ deployment: { id: { owner: account.address, dseq: "12345" } } }],
-            })),
+            getDeployments,
             closeDeployment: closeBroadcast,
           },
         },
@@ -183,6 +184,7 @@ describe("real deploy create to exact close", () => {
       expect.any(Object),
     );
     expect(getLeases).not.toHaveBeenCalled();
+    expect(getDeployments).not.toHaveBeenCalled();
     expect(generateToken).not.toHaveBeenCalled();
     expect(getProvider).not.toHaveBeenCalled();
     expect(getProviderHostUri).not.toHaveBeenCalled();
