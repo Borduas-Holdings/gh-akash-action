@@ -1,6 +1,6 @@
 {
   "name": "@akashnetwork/close-deployment",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "GitHub Action to close deployments on Akash Network",
   "main": "dist/index.js",
   "scripts": {
