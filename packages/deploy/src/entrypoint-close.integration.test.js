@@ -202,5 +202,5 @@ describe("deploy action entry point to exact close", () => {
     expect(getProvider).not.toHaveBeenCalled();
     expect(getProviderHostUri).not.toHaveBeenCalled();
     expect(getLeaseStatus).not.toHaveBeenCalled();
-  });
+  }, 5_000);
 });
