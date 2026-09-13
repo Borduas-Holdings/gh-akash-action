@@ -6,6 +6,7 @@ import { getInputs } from "./inputs.ts";
 import { DirectSecp256k1HdWallet } from "@cosmjs/proto-signing";
 import { createChainNodeWebSDK } from "@akashnetwork/chain-sdk/web";
 import { createStargateClient } from "@akashnetwork/chain-sdk";
+import { publishDeploymentReceipt } from "./receipt.ts";
 
 async function run(): Promise<void> {
   try {
@@ -33,6 +34,11 @@ async function run(): Promise<void> {
     });
 
     let result: DeploymentResult;
+    let receiptPublished = false;
+    const publishReceipt = (deploymentId: DeploymentResult["deploymentId"]) => {
+      publishDeploymentReceipt(deploymentId, inputs.deploymentReceiptPath);
+      receiptPublished = true;
+    };
     let prevDseq: string | undefined;
     const existingDeploymentDetails = getExistingDeploymentDetails(inputs.deploymentDetailsPath);
 
@@ -58,20 +64,20 @@ async function run(): Promise<void> {
       } else {
         core.info("Lease is no longer active — creating a new deployment...");
         prevDseq = existingDeploymentDetails.dseq;
-        result = await createDeployment(sdk, wallet, inputs);
+        result = await createDeployment(sdk, wallet, inputs, { onDeploymentCreated: publishReceipt });
       }
     } else {
       core.info("Creating a deployment on Akash Network...");
-      result = await createDeployment(sdk, wallet, inputs);
+      result = await createDeployment(sdk, wallet, inputs, { onDeploymentCreated: publishReceipt });
     }
 
+    if (!receiptPublished) {
+      publishReceipt(result.deploymentId);
+    }
     core.setOutput("is-new", result.isNew.toString());
     if (prevDseq) {
       core.setOutput("prev-dseq", prevDseq);
     }
-    core.setOutput("deployment-id", `${result.deploymentId.owner}/${result.deploymentId.dseq}`);
-    core.setOutput("dseq", result.deploymentId.dseq.toString());
-
     if (result.lease) {
       core.setOutput(
         "lease-id",

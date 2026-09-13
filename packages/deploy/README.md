@@ -50,18 +50,27 @@ jobs:
 | `tx-rpc-url` | RPC URL for submitting transactions | No | `https://rpc.akt.dev/rpc` |
 | `lease-timeout` | Maximum time to wait for bids (seconds) | No | `180` |
 | `deployment-details-path` | Path to a JSON file for storing/reading deployment details. Enables redeploy support — if the file exists the action reuses the existing deployment (or creates a new one if the lease has closed). The file is updated after every new deployment. | No | - |
+| `deployment-receipt-path` | Path for an atomic owner/dseq receipt written immediately after a successful create transaction, before bid, lease, manifest, or status work. | No | - |
 
 ## Outputs
 
 | Output | Description |
 |--------|-------------|
+| `deployment-owner` | The wallet-derived owner of the deployment |
 | `deployment-id` | The deployment ID (owner/dseq) |
 | `dseq` | The deployment sequence number |
+| `deployment-receipt-path` | Absolute path of the receipt when `deployment-receipt-path` was provided |
 | `lease-id` | The lease ID (owner/dseq/gseq/oseq/provider) |
 | `provider` | The selected provider address |
 | `lease-status` | The status of the lease |
 | `is-new` | `true` if a brand-new deployment was created, `false` if an existing deployment was reused |
 | `prev-dseq` | The previous deployment sequence number. Set only when `is-new` is `true` and `deployment-details-path` is provided — meaning the old lease had closed and a fresh deployment was created in its place |
+
+The owner and dseq outputs, and the optional receipt file, are published as soon as
+the deployment-create transaction succeeds. They therefore remain available to a
+later step with `if: always()` when bid selection, lease creation, manifest submission,
+or status inspection fails. Cleanup should bind both values; a dseq alone is not an
+account-scoped deployment identity.
 
 ## Bid Selection
 

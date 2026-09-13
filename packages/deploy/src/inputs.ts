@@ -19,6 +19,7 @@ export interface ActionInputs {
   txRpcUrl: string;
   leaseTimeout: number;
   deploymentDetailsPath?: string;
+  deploymentReceiptPath?: string;
 }
 
 type SelectBidStrategy = "cheapest" | "first";
@@ -117,6 +118,7 @@ export async function getInputs(): Promise<ActionInputs> {
     txRpcUrl: rpc.rpcUrl,
     leaseTimeout: parseInt(core.getInput("lease-timeout") || "180", 10),
     deploymentDetailsPath: core.getInput("deployment-details-path") || undefined,
+    deploymentReceiptPath: core.getInput("deployment-receipt-path") || undefined,
   };
 }
 

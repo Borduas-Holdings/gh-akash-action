@@ -288,6 +288,77 @@ describe(createDeployment.name, () => {
     );
   });
 
+  it("publishes the wallet owner and dseq before a post-create bid failure", async () => {
+    const { sdk, wallet, inputs, generateToken, ownerAddress } = await setup();
+    const events: string[] = [];
+    sdk.akash.deployment.v1beta4.createDeployment.mockImplementation(async () => {
+      events.push("create-broadcast");
+      return undefined as any;
+    });
+    sdk.akash.market.v1beta5.getBids.mockImplementation(async () => {
+      events.push("bid-query");
+      throw new Error("post-create bid failure");
+    });
+    const onDeploymentCreated = vi.fn(async () => {
+      events.push("publish-receipt");
+    });
+
+    vi.useFakeTimers();
+    await expect(
+      runWithFakeTimers(
+        createDeployment(sdk, wallet, inputs, {
+          logger: mock<Logger>(),
+          generateToken,
+          onDeploymentCreated,
+        })
+      )
+    ).rejects.toThrow("post-create bid failure");
+
+    expect(onDeploymentCreated).toHaveBeenCalledOnce();
+    expect(onDeploymentCreated).toHaveBeenCalledWith({ owner: ownerAddress, dseq: "12345" });
+    expect(events.slice(0, 3)).toEqual(["create-broadcast", "publish-receipt", "bid-query"]);
+    expect(sdk.akash.deployment.v1beta4.closeDeployment).not.toHaveBeenCalled();
+  });
+
+  it.each(["bid", "lease", "manifest", "status"] as const)(
+    "retains the exact receipt through a post-create %s failure",
+    async (phase) => {
+      const { sdk, wallet, inputs, fetch, generateToken, ownerAddress } = await setup();
+      const failure = new Error(`${phase} failed after create`);
+      if (phase === "bid") {
+        sdk.akash.market.v1beta5.getBids.mockRejectedValue(failure);
+      } else if (phase === "lease") {
+        sdk.akash.market.v1beta5.createLease.mockRejectedValue(failure);
+      } else if (phase === "manifest") {
+        sdk.akash.provider.v1beta4.getProvider.mockRejectedValue(failure);
+      } else {
+        fetch.mockImplementation(async (input) => {
+          if (String(input).includes("/status")) {
+            throw failure;
+          }
+          return new Response("", { status: 200 });
+        });
+      }
+      const onDeploymentCreated = vi.fn();
+
+      vi.useFakeTimers();
+      await expect(
+        runWithFakeTimers(
+          createDeployment(sdk, wallet, inputs, {
+            fetch,
+            logger: mock<Logger>(),
+            generateToken,
+            onDeploymentCreated,
+          })
+        )
+      ).rejects.toThrow(`${phase} failed after create`);
+
+      expect(onDeploymentCreated).toHaveBeenCalledOnce();
+      expect(onDeploymentCreated).toHaveBeenCalledWith({ owner: ownerAddress, dseq: "12345" });
+      expect(sdk.akash.deployment.v1beta4.closeDeployment).not.toHaveBeenCalled();
+    }
+  );
+
   it("creates lease after finding bid", async () => {
     const { sdk, wallet, inputs, fetch, mockBid, generateToken } = await setup();
 
