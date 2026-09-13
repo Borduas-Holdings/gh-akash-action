@@ -28,10 +28,14 @@ export function publishDeploymentReceipt(
   const owner = deploymentId.owner.trim();
   const dseq = deploymentId.dseq.trim();
   if (!owner || !/^akash1[0-9a-z]+$/.test(owner)) {
-    throw new Error("Cannot publish deployment receipt: owner is not an Akash address");
+    throw new Error(
+      "Cannot publish deployment receipt: owner is not an Akash address",
+    );
   }
   if (!/^[1-9][0-9]*$/.test(dseq)) {
-    throw new Error("Cannot publish deployment receipt: dseq is not a positive canonical decimal");
+    throw new Error(
+      "Cannot publish deployment receipt: dseq is not a positive canonical decimal",
+    );
   }
 
   const receipt: DeploymentReceipt = {
@@ -39,24 +43,54 @@ export function publishDeploymentReceipt(
     owner,
     dseq,
   };
-  setOutput("deployment-owner", owner);
-  setOutput("deployment-id", `${owner}/${dseq}`);
-  setOutput("dseq", dseq);
-
+  const failures: Error[] = [];
+  let outPath: string | undefined;
   if (receiptPath) {
-    const outPath = path.resolve(process.cwd(), receiptPath);
+    outPath = path.resolve(process.cwd(), receiptPath);
     const tempPath = `${outPath}.tmp-${process.pid}`;
-    fs.mkdirSync(path.dirname(outPath), { recursive: true });
     try {
-      fs.writeFileSync(tempPath, `${JSON.stringify(receipt)}\n`, { encoding: "utf-8", mode: 0o600 });
+      fs.mkdirSync(path.dirname(outPath), { recursive: true });
+      fs.writeFileSync(tempPath, `${JSON.stringify(receipt)}\n`, {
+        encoding: "utf-8",
+        mode: 0o600,
+      });
       fs.renameSync(tempPath, outPath);
+    } catch (error) {
+      failures.push(error instanceof Error ? error : new Error(String(error)));
+      outPath = undefined;
     } finally {
       if (fs.existsSync(tempPath)) {
         fs.unlinkSync(tempPath);
       }
     }
-    setOutput("deployment-receipt-path", outPath);
-    core.info(`Deployment receipt written to: ${outPath}`);
+    if (outPath) {
+      core.info(`Deployment receipt written to: ${outPath}`);
+    }
+  }
+
+  // The file and GitHub outputs are independent recovery carriers. Attempt the
+  // durable file first, then every output even if either carrier fails, so one
+  // broken channel cannot suppress the other after an on-chain create.
+  const outputs: [string, string][] = [
+    ["deployment-owner", owner],
+    ["deployment-id", `${owner}/${dseq}`],
+    ["dseq", dseq],
+  ];
+  if (outPath) {
+    outputs.push(["deployment-receipt-path", outPath]);
+  }
+  for (const [name, value] of outputs) {
+    try {
+      setOutput(name, value);
+    } catch (error) {
+      failures.push(error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+  if (failures.length) {
+    throw new AggregateError(
+      failures,
+      "Deployment receipt publication was incomplete",
+    );
   }
   return receipt;
 }

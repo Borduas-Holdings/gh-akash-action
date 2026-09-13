@@ -267411,34 +267411,65 @@ function publishDeploymentReceipt(deploymentId, receiptPath, setOutput2 = setOut
   const owner = deploymentId.owner.trim();
   const dseq = deploymentId.dseq.trim();
   if (!owner || !/^akash1[0-9a-z]+$/.test(owner)) {
-    throw new Error("Cannot publish deployment receipt: owner is not an Akash address");
+    throw new Error(
+      "Cannot publish deployment receipt: owner is not an Akash address"
+    );
   }
   if (!/^[1-9][0-9]*$/.test(dseq)) {
-    throw new Error("Cannot publish deployment receipt: dseq is not a positive canonical decimal");
+    throw new Error(
+      "Cannot publish deployment receipt: dseq is not a positive canonical decimal"
+    );
   }
   const receipt = {
     schema: DEPLOYMENT_RECEIPT_SCHEMA,
     owner,
     dseq
   };
-  setOutput2("deployment-owner", owner);
-  setOutput2("deployment-id", `${owner}/${dseq}`);
-  setOutput2("dseq", dseq);
+  const failures = [];
+  let outPath;
   if (receiptPath) {
-    const outPath = path2__namespace.resolve(process.cwd(), receiptPath);
+    outPath = path2__namespace.resolve(process.cwd(), receiptPath);
     const tempPath = `${outPath}.tmp-${process.pid}`;
-    fs5__namespace.mkdirSync(path2__namespace.dirname(outPath), { recursive: true });
     try {
+      fs5__namespace.mkdirSync(path2__namespace.dirname(outPath), { recursive: true });
       fs5__namespace.writeFileSync(tempPath, `${JSON.stringify(receipt)}
-`, { encoding: "utf-8", mode: 384 });
+`, {
+        encoding: "utf-8",
+        mode: 384
+      });
       fs5__namespace.renameSync(tempPath, outPath);
+    } catch (error2) {
+      failures.push(error2 instanceof Error ? error2 : new Error(String(error2)));
+      outPath = void 0;
     } finally {
       if (fs5__namespace.existsSync(tempPath)) {
         fs5__namespace.unlinkSync(tempPath);
       }
     }
-    setOutput2("deployment-receipt-path", outPath);
-    info(`Deployment receipt written to: ${outPath}`);
+    if (outPath) {
+      info(`Deployment receipt written to: ${outPath}`);
+    }
+  }
+  const outputs = [
+    ["deployment-owner", owner],
+    ["deployment-id", `${owner}/${dseq}`],
+    ["dseq", dseq]
+  ];
+  if (outPath) {
+    outputs.push(["deployment-receipt-path", outPath]);
+  }
+  for (const [name2, value] of outputs) {
+    try {
+      setOutput2(name2, value);
+    } catch (error2) {
+      failures.push(error2 instanceof Error ? error2 : new Error(String(error2)));
+    }
+  }
+  if (failures.length) {
+    throw new AggregateError(
+      failures,
+      "Deployment receipt publication was incomplete"
+    );
   }
   return receipt;
 }

@@ -10,6 +10,7 @@ import { createDeployment, getExistingDeploymentDetails, updateDeploymentManifes
 import type { ActionInputs, JsonResponse } from "./inputs.js";
 
 type ChainSDK = ReturnType<typeof createChainNodeWebSDK>;
+const realSetTimeout = globalThis.setTimeout;
 
 /**
  * Helper to run a promise with fake timers.
@@ -26,8 +27,13 @@ async function runWithFakeTimers<T>(promise: Promise<T>, maxIterations = 100): P
 
   for (let i = 0; i < maxIterations && !resolved; i++) {
     await vi.advanceTimersByTimeAsync(10_000);
+    // Advancing the virtual clock does not yield to native crypto or I/O
+    // completions. Use the captured real timer so a slow hosted runner cannot
+    // exhaust this loop and silently return an uninitialised result.
+    await new Promise((resolve) => realSetTimeout(resolve, 0));
   }
 
+  if (!resolved) throw new Error("promise did not settle while advancing the fake clock");
   if (error) throw error;
   return result!;
 }
@@ -473,9 +479,11 @@ describe(createDeployment.name, () => {
     getBidsError?: Error;
   }) {
     const sdk = mockDeep<ChainSDK>();
-    const wallet = await DirectSecp256k1HdWallet.generate(12, { prefix: "akash" });
-    const [account] = await wallet.getAccounts();
-    const ownerAddress = account.address;
+    const ownerAddress = "akash1n4uut3vxmkdp8wsrya3q0qyddgqey0rh9as4ee";
+    const wallet = {
+      mnemonic: "deterministic test mnemonic",
+      getAccounts: vi.fn(async () => [{ address: ownerAddress }]),
+    } as unknown as DirectSecp256k1HdWallet;
     const providerAddress = "akash1provider0000000000000000000000000000";
 
     // Mock fetch returns LeaseStatus structure for getLeaseStatus calls
@@ -655,15 +663,18 @@ describe(updateDeploymentManifest.name, () => {
 
   async function setup() {
     const sdk = mockDeep<ChainSDK>();
-    const wallet = await DirectSecp256k1HdWallet.generate(12, { prefix: "akash" });
-    const [account] = await wallet.getAccounts();
+    const ownerAddress = "akash1n4uut3vxmkdp8wsrya3q0qyddgqey0rh9as4ee";
+    const wallet = {
+      mnemonic: "deterministic test mnemonic",
+      getAccounts: vi.fn(async () => [{ address: ownerAddress }]),
+    } as unknown as DirectSecp256k1HdWallet;
     const providerAddress = "akash1provider0000000000000000000000000000";
 
     const existingDeployment: StoredDeploymentDetails = {
       dseq: "99999",
       lease: {
         id: {
-          owner: account.address,
+          owner: ownerAddress,
           dseq: "99999",
           gseq: 1,
           oseq: 1,

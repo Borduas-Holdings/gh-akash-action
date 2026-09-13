@@ -37,6 +37,7 @@ vi.mock("@actions/core", () => ({
 
 describe("deploy action entry point", () => {
   const directories: string[] = [];
+  const mutantFiles: string[] = [];
   const deploymentId = {
     owner: "akash1n4uut3vxmkdp8wsrya3q0qyddgqey0rh9as4ee",
     dseq: "12345",
@@ -65,6 +66,9 @@ describe("deploy action entry point", () => {
   afterEach(() => {
     for (const directory of directories.splice(0)) {
       fs.rmSync(directory, { recursive: true, force: true });
+    }
+    for (const file of mutantFiles.splice(0)) {
+      fs.rmSync(file, { force: true });
     }
   });
 
@@ -95,14 +99,60 @@ describe("deploy action entry point", () => {
       "publishDeploymentReceipt(deploymentId, inputs.deploymentReceiptPath);",
       "void deploymentId;",
     ],
-  ])("keeps the %s at one load-bearing entry-point call site", (_name, target, replacement) => {
+  ])("executes the %s mutant and loses the failure-path cleanup carrier", async (_name, target, replacement) => {
     const source = fs.readFileSync(path.resolve(process.cwd(), "src/index.ts"), "utf-8");
     const targetCount = source.split(target).length - 1;
     expect(targetCount).toBe(1);
     const mutated = source.replace(target, replacement);
     expect(mutated).not.toBe(source);
-    expect(mutated.split(target).length - 1).toBe(0);
-    expect(mutated).toContain(replacement);
+    const mutantPath = path.resolve(process.cwd(), `src/.index-mutant-${process.pid}-${_name.replaceAll(" ", "-")}.ts`);
+    mutantFiles.push(mutantPath);
+    fs.writeFileSync(mutantPath, mutated, "utf-8");
+
+    mocks.createDeployment.mockImplementation(async (_sdk, _wallet, _inputs, options) => {
+      await options?.onDeploymentCreated?.(deploymentId);
+      throw new Error("post-create failure");
+    });
+    const module = await import(/* @vite-ignore */ mutantPath);
+    await module.runPromise;
+
+    const receiptPath = (await mocks.getInputs.mock.results[0].value).deploymentReceiptPath;
+    expect(fs.existsSync(receiptPath)).toBe(false);
+    expect(core.setOutput).not.toHaveBeenCalledWith("deployment-id", expect.anything());
+    expect(core.setFailed).toHaveBeenCalled();
+  });
+
+  it("executes a replacement-create branch bypass and loses its failure-path carrier", async () => {
+    const source = fs.readFileSync(path.resolve(process.cwd(), "src/index.ts"), "utf-8");
+    const target = '        core.info("Lease is no longer active — creating a new deployment...");\n' +
+      "        prevDseq = existingDeploymentDetails.dseq;\n" +
+      "        result = await createNewDeployment();";
+    expect(source.split(target).length - 1).toBe(1);
+    const mutated = source.replace(
+      target,
+      target.replace("result = await createNewDeployment();", "result = await createDeployment(sdk, wallet, inputs);")
+    );
+    const mutantPath = path.resolve(process.cwd(), `src/.index-mutant-${process.pid}-replacement-branch.ts`);
+    mutantFiles.push(mutantPath);
+    fs.writeFileSync(mutantPath, mutated, "utf-8");
+
+    const existing = {
+      dseq: "99999",
+      lease: { id: { ...deploymentId, dseq: "99999", gseq: 1, oseq: 1, provider: "akash1provider" } },
+    };
+    mocks.getExistingDeploymentDetails.mockReturnValue(existing);
+    mocks.createChainNodeWebSDK.mockReturnValue({
+      akash: { market: { v1beta5: { getLeases: vi.fn().mockResolvedValue({ leases: [] }) } } },
+    });
+    mocks.createDeployment.mockRejectedValue(new Error("replacement failed after create"));
+
+    const module = await import(/* @vite-ignore */ mutantPath);
+    await module.runPromise;
+
+    const receiptPath = (await mocks.getInputs.mock.results[0].value).deploymentReceiptPath;
+    expect(fs.existsSync(receiptPath)).toBe(false);
+    expect(core.setOutput).not.toHaveBeenCalledWith("deployment-id", expect.anything());
+    expect(core.setFailed).toHaveBeenCalledWith("replacement failed after create");
   });
 
   it("publishes an adopted deployment through the separate success fallback", async () => {

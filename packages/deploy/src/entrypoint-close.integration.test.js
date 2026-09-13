@@ -1,7 +1,6 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { DirectSecp256k1HdWallet } from "@cosmjs/proto-signing";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { closeDeployment } from "../../close-deployment/src/close-deployment.js";
 
@@ -9,6 +8,7 @@ const harness = vi.hoisted(() => ({
   inputs: undefined,
   outputs: new Map(),
   sdk: undefined,
+  wallet: undefined,
   setFailed: vi.fn(),
 }));
 
@@ -20,6 +20,9 @@ vi.mock("@actions/core", () => ({
   setOutput: vi.fn((name, value) => harness.outputs.set(name, String(value))),
 }));
 vi.mock("@akashnetwork/chain-sdk", () => ({ createStargateClient: vi.fn(() => ({})) }));
+vi.mock("@cosmjs/proto-signing", () => ({
+  DirectSecp256k1HdWallet: { fromMnemonic: vi.fn(async () => harness.wallet) },
+}));
 vi.mock("@akashnetwork/chain-sdk/web", async (importOriginal) => ({
   ...(await importOriginal()),
   createChainNodeWebSDK: vi.fn(() => harness.sdk),
@@ -60,6 +63,7 @@ deployment:
       profile: web
       count: 1
 `;
+const realSetTimeout = globalThis.setTimeout;
 
 async function settleWithTimers(promise) {
   let settled = false;
@@ -73,7 +77,9 @@ async function settleWithTimers(promise) {
   );
   for (let attempt = 0; attempt < 20 && !settled; attempt++) {
     await vi.advanceTimersByTimeAsync(10_000);
+    await new Promise((resolve) => realSetTimeout(resolve, 0));
   }
+  if (!settled) throw new Error("entry point did not settle while advancing the fake clock");
   return promise;
 }
 
@@ -90,9 +96,10 @@ describe("deploy action entry point to exact close", () => {
     }
   });
 
-  it("closes its real receipt once when bid lookup fails after create", async () => {
-    const wallet = await DirectSecp256k1HdWallet.generate(12, { prefix: "akash" });
-    const [account] = await wallet.getAccounts();
+  it.each(["fresh", "replacement"])("closes its real receipt once when %s create reaches a bid failure", async (branch) => {
+    const account = { address: "akash1n4uut3vxmkdp8wsrya3q0qyddgqey0rh9as4ee" };
+    const wallet = { getAccounts: vi.fn(async () => [account]) };
+    harness.wallet = wallet;
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), "akash-entrypoint-close-"));
     directories.push(directory);
     const receiptPath = path.join(directory, "receipt.json");
@@ -133,7 +140,7 @@ describe("deploy action entry point to exact close", () => {
       },
     };
     harness.inputs = {
-      mnemonic: wallet.mnemonic,
+      mnemonic: "deterministic test mnemonic",
       selectBid: (bids) => bids[0],
       sdl: SDL,
       gas: "auto",
@@ -146,6 +153,15 @@ describe("deploy action entry point to exact close", () => {
       leaseTimeout: 30,
       deploymentReceiptPath: receiptPath,
     };
+
+    if (branch === "replacement") {
+      const detailsPath = path.join(directory, "previous-deployment.json");
+      fs.writeFileSync(detailsPath, JSON.stringify({
+        dseq: "99999",
+        lease: { id: { owner: account.address, dseq: "99999", gseq: 1, oseq: 1, provider: "akash1provider" } },
+      }));
+      harness.inputs.deploymentDetailsPath = detailsPath;
+    }
 
     vi.useFakeTimers();
     const { runPromise } = await import("./index.ts");
@@ -173,7 +189,7 @@ describe("deploy action entry point to exact close", () => {
       harness.sdk,
       wallet,
       {
-        mnemonic: wallet.mnemonic,
+        mnemonic: "deterministic test mnemonic",
         expectedOwner: receipt.owner,
         deploymentFilter: { dseq: receipt.dseq },
         gas: "auto",
@@ -197,7 +213,7 @@ describe("deploy action entry point to exact close", () => {
       { id: { owner: receipt.owner, dseq: receipt.dseq } },
       expect.any(Object),
     );
-    expect(getLeases).not.toHaveBeenCalled();
+    expect(getLeases).toHaveBeenCalledTimes(branch === "replacement" ? 1 : 0);
     expect(generateToken).not.toHaveBeenCalled();
     expect(getProvider).not.toHaveBeenCalled();
     expect(getProviderHostUri).not.toHaveBeenCalled();
