@@ -271,26 +271,20 @@ describe(createDeployment.name, () => {
     );
   });
 
-  it("closes deployment on error", async () => {
-    const { sdk, wallet, inputs, generateToken, ownerAddress } = await setup({ getBidsError: new Error("Network error") });
+  it("retains a created deployment on error for the caller's exact cleanup path", async () => {
+    const { sdk, wallet, inputs, generateToken } = await setup({ getBidsError: new Error("Network error") });
+    const logger = mock<Logger>();
 
     vi.useFakeTimers();
     await expect(
       runWithFakeTimers(
-        createDeployment(sdk, wallet, inputs, { logger: mock<Logger>(), generateToken })
+        createDeployment(sdk, wallet, inputs, { logger, generateToken })
       )
     ).rejects.toThrow("Network error");
 
-    expect(sdk.akash.deployment.v1beta4.closeDeployment).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: {
-          owner: ownerAddress,
-          dseq: "12345",
-        },
-      }),
-      expect.objectContaining({
-        memo: "Deployment close by GitHub Action because of error",
-      })
+    expect(sdk.akash.deployment.v1beta4.closeDeployment).not.toHaveBeenCalled();
+    expect(logger.warning).toHaveBeenCalledWith(
+      "Deployment was NOT auto-closed. Use close-deployment action to clean up if needed."
     );
   });
 
