@@ -330,7 +330,12 @@ describe(createDeployment.name, () => {
       } else if (phase === "lease") {
         sdk.akash.market.v1beta5.createLease.mockRejectedValue(failure);
       } else if (phase === "manifest") {
-        sdk.akash.provider.v1beta4.getProvider.mockRejectedValue(failure);
+        fetch.mockImplementation(async (input) => {
+          if (String(input).includes("/manifest")) {
+            throw failure;
+          }
+          return new Response("", { status: 200 });
+        });
       } else {
         fetch.mockImplementation(async (input) => {
           if (String(input).includes("/status")) {
