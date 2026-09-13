@@ -104,6 +104,20 @@ describe(closeDeployment.name, () => {
     expect(options.getLeaseStatus).not.toHaveBeenCalled();
   });
 
+  it("refuses a non-canonical exact DSEQ before any query or broadcast", async () => {
+    const { sdk, wallet, inputs, options } = await setup({
+      inputOverrides: { deploymentFilter: { dseq: "01" } },
+    });
+
+    await expect(closeDeployment(sdk, wallet, inputs, options)).rejects.toThrow(
+      /positive canonical decimal/
+    );
+
+    expect(sdk.akash.deployment.v1beta4.getDeployments).not.toHaveBeenCalled();
+    expect(sdk.akash.market.v1beta5.getLeases).not.toHaveBeenCalled();
+    expect(sdk.akash.deployment.v1beta4.closeDeployment).not.toHaveBeenCalled();
+  });
+
   it("broadcasts one close when an exact DSEQ query repeats the same deployment", async () => {
     const { sdk, wallet, inputs, options } = await setup({
       deployments: [{ dseq: "12345" }, { dseq: "12345" }],
