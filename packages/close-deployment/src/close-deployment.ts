@@ -23,6 +23,7 @@ export async function closeDeployment(
     getLeaseStatus?: typeof getLeaseStatus;
     generateToken?: typeof generateToken;
     getProviderHostUri?: typeof getProviderHostUri;
+    assertExpectedOwner?: typeof assertExpectedOwner;
   }
 ): Promise<CloseDeploymentResult[]> {
   const di = {
@@ -30,9 +31,11 @@ export async function closeDeployment(
     getLeaseStatus: options?.getLeaseStatus || getLeaseStatus,
     generateToken: options?.generateToken || generateToken,
     getProviderHostUri: options?.getProviderHostUri || getProviderHostUri,
+    assertExpectedOwner: options?.assertExpectedOwner || assertExpectedOwner,
   };
 
   const [account] = await wallet.getAccounts();
+  di.assertExpectedOwner(inputs.expectedOwner, account.address);
   di.logger.info(`Using account: ${account.address}`);
 
   const deploymentFilters = {
@@ -109,6 +112,19 @@ export async function closeDeployment(
   }
 
   return results;
+}
+
+/**
+ * Bind a caller-supplied deployment subject to the account that will sign the
+ * close transaction. This check deliberately runs before any chain query: a
+ * rotated or misconfigured mnemonic must have no observable cleanup effect.
+ */
+export function assertExpectedOwner(expectedOwner: string | undefined, signerOwner: string): void {
+  if (expectedOwner && expectedOwner !== signerOwner) {
+    throw new Error(
+      `Refusing to close deployment: expected owner ${expectedOwner} does not match signing account ${signerOwner}`
+    );
+  }
 }
 
 function buildTxOptions(inputs: ActionInputs, memo: string) {

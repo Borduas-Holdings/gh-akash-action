@@ -19,6 +19,7 @@ This GitHub Action closes one or more deployments on the Akash Network. Deployme
 |-------|-------------|----------|---------|
 | `mnemonic` | Wallet mnemonic phrase for signing transactions | Yes | - |
 | `filter` | YAML filter to select deployments/leases to close (see [Filter](#filter)) | Yes | - |
+| `expected-owner` | Exact Akash owner expected to match the signing mnemonic; mismatch refuses before chain queries or broadcast | No | - |
 | `gas` | Gas limit for transactions | No | `auto` |
 | `gas-multiplier` | Gas multiplier (used when gas is `auto`) | No | `1.5` |
 | `fee` | Fee amount in the smallest denomination | No | - |
@@ -168,7 +169,17 @@ with:
   mnemonic: ${{ secrets.AKASH_MNEMONIC }}
 ```
 
-2. **Use environment protection**: Consider using GitHub Environments with required reviewers for production deployments.
+2. **Bind exact cleanup subjects to their owner**: When a DSEQ comes from an earlier job or persisted receipt, pass that receipt's owner as `expected-owner`. The action refuses if credential rotation selects a different signing account.
+
+```yaml
+with:
+  mnemonic: ${{ secrets.AKASH_MNEMONIC }}
+  expected-owner: ${{ needs.provision.outputs.owner }}
+  filter: |
+    dseq: ${{ needs.provision.outputs.dseq }}
+```
+
+3. **Use environment protection**: Consider using GitHub Environments with required reviewers for production deployments.
 
 ## Network Configuration
 

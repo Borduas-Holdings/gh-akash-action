@@ -15,6 +15,13 @@ inputs:
     description: 'Filter to select deployments to close'
     required: true
 
+  expected-owner:
+    description: >-
+      Expected Akash owner address for the deployment subject. When set, the
+      action refuses before querying or broadcasting unless the signing
+      mnemonic resolves to this exact address.
+    required: false
+
   gas:
     description: 'Gas limit for transactions'
     required: false

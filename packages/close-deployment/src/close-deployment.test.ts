@@ -18,6 +18,56 @@ describe(closeDeployment.name, () => {
     expect(sdk.akash.deployment.v1beta4.closeDeployment).not.toHaveBeenCalled();
   });
 
+  it("refuses an expected-owner mismatch before querying or broadcasting", async () => {
+    const { sdk, wallet, inputs, options } = await setup({
+      deployments: [{ dseq: "12345" }],
+      leases: [{ dseq: "12345", provider: "akash1provider1" }],
+      inputOverrides: { expectedOwner: "akash1differentowner" },
+    });
+
+    await expect(closeDeployment(sdk, wallet, inputs, options)).rejects.toThrow(
+      /expected owner akash1differentowner does not match signing account/
+    );
+
+    expect(sdk.akash.deployment.v1beta4.getDeployments).not.toHaveBeenCalled();
+    expect(sdk.akash.market.v1beta5.getLeases).not.toHaveBeenCalled();
+    expect(sdk.akash.deployment.v1beta4.closeDeployment).not.toHaveBeenCalled();
+  });
+
+  it("accepts an expected owner matching the signing account", async () => {
+    const fixture = await setup({
+      deployments: [{ dseq: "12345" }],
+      leases: [{ dseq: "12345", provider: "akash1provider1" }],
+    });
+    fixture.inputs.expectedOwner = fixture.ownerAddress;
+
+    const result = await closeDeployment(fixture.sdk, fixture.wallet, fixture.inputs, fixture.options);
+
+    expect(result).toHaveLength(1);
+    expect(fixture.sdk.akash.deployment.v1beta4.closeDeployment).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls the owner-enforcement boundary before any cleanup effect", async () => {
+    const fixture = await setup({
+      deployments: [{ dseq: "12345" }],
+      leases: [{ dseq: "12345", provider: "akash1provider1" }],
+    });
+    const enforcement = vi.fn(() => {
+      throw new Error("owner-enforcement-effect");
+    });
+
+    await expect(
+      closeDeployment(fixture.sdk, fixture.wallet, fixture.inputs, {
+        ...fixture.options,
+        assertExpectedOwner: enforcement,
+      })
+    ).rejects.toThrow("owner-enforcement-effect");
+
+    expect(enforcement).toHaveBeenCalledWith(undefined, fixture.ownerAddress);
+    expect(fixture.sdk.akash.deployment.v1beta4.getDeployments).not.toHaveBeenCalled();
+    expect(fixture.sdk.akash.deployment.v1beta4.closeDeployment).not.toHaveBeenCalled();
+  });
+
   it("returns empty array when no leases found for a deployment", async () => {
     const { sdk, wallet, inputs, options } = await setup({
       deployments: [{ dseq: "12345" }],

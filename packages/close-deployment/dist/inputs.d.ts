@@ -10,6 +10,7 @@ export interface DeploymentContext {
 }
 export interface ActionInputs {
     mnemonic: string;
+    expectedOwner?: string;
     deploymentFilter: {
         dseq?: string;
         state?: string;

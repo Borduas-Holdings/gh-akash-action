@@ -16,6 +16,7 @@ export interface DeploymentContext {
 
 export interface ActionInputs {
   mnemonic: string;
+  expectedOwner?: string;
   deploymentFilter: {
     dseq?: string;
     state?: string;
@@ -56,6 +57,7 @@ async function resolveRpc(): Promise<ResolvedEndpoints> {
 
 export async function getInputs(): Promise<ActionInputs> {
   const mnemonic = core.getInput("mnemonic", { required: true });
+  const expectedOwner = core.getInput("expected-owner") || undefined;
   const gas = core.getInput("gas") || "auto";
   const gasMultiplier = core.getInput("gas-multiplier") || "1.5";
   const fee = core.getInput("fee") || "";
@@ -66,6 +68,7 @@ export async function getInputs(): Promise<ActionInputs> {
 
   return {
     mnemonic,
+    expectedOwner,
     gas,
     gasMultiplier,
     fee,
@@ -103,6 +106,9 @@ function varlidateFilter(rawFilter: unknown): { lease?: Record<string, unknown>;
   }
 
   const filter = rawFilter as Record<string, unknown>;
+  if ("owner" in filter) {
+    throw new Error(`"owner" must be passed through the "expected-owner" input, not the filter`);
+  }
   if (filter.dseq !== undefined && typeof filter.dseq !== "string" && typeof filter.dseq !== "number") {
     throw new Error(`"dseq" filter must be a string or number if provided`);
   }

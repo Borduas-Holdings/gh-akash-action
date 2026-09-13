@@ -261937,9 +261937,11 @@ async function closeDeployment(sdk, wallet, inputs, options) {
     logger: core_exports,
     getLeaseStatus: import_actions_utils.getLeaseStatus,
     generateToken: import_actions_utils.generateToken,
-    getProviderHostUri: getProviderHostUri
+    getProviderHostUri: getProviderHostUri,
+    assertExpectedOwner: assertExpectedOwner
   };
   const [account] = await wallet.getAccounts();
+  di.assertExpectedOwner(inputs.expectedOwner, account.address);
   di.logger.info(`Using account: ${account.address}`);
   const deploymentFilters = {
     ...inputs.deploymentFilter,
@@ -262008,6 +262010,13 @@ async function closeDeployment(sdk, wallet, inputs, options) {
     di.logger.info(`Deployment ${lease.dseq} has been closed successfully!`);
   }
   return results;
+}
+function assertExpectedOwner(expectedOwner, signerOwner) {
+  if (expectedOwner && expectedOwner !== signerOwner) {
+    throw new Error(
+      `Refusing to close deployment: expected owner ${expectedOwner} does not match signing account ${signerOwner}`
+    );
+  }
 }
 function buildTxOptions(inputs, memo) {
   const txOptions = {
@@ -262366,6 +262375,7 @@ async function resolveRpc() {
 }
 async function getInputs() {
   const mnemonic = getInput("mnemonic", { required: true });
+  const expectedOwner = getInput("expected-owner") || void 0;
   const gas = getInput("gas") || "auto";
   const gasMultiplier = getInput("gas-multiplier") || "1.5";
   const fee = getInput("fee") || "";
@@ -262374,6 +262384,7 @@ async function getInputs() {
   const rpc = await resolveRpc();
   return {
     mnemonic,
+    expectedOwner,
     gas,
     gasMultiplier,
     fee,
@@ -262405,6 +262416,9 @@ function varlidateFilter(rawFilter) {
     throw new Error(`"filter" input must be an object`);
   }
   const filter = rawFilter;
+  if ("owner" in filter) {
+    throw new Error(`"owner" must be passed through the "expected-owner" input, not the filter`);
+  }
   if (filter.dseq !== void 0 && typeof filter.dseq !== "string" && typeof filter.dseq !== "number") {
     throw new Error(`"dseq" filter must be a string or number if provided`);
   }
