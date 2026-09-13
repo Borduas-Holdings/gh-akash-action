@@ -49,13 +49,13 @@ export async function closeDeployment(
   });
 
   di.logger.info(`Found ${deploymentsResult.deployments.length} deployments matching filters`);
-  let deploymentDseqs = deploymentsResult.deployments.map((deployment) => {
+  let deploymentDseqs = [...new Set(deploymentsResult.deployments.map((deployment) => {
     const dseq = deployment.deployment?.id?.dseq?.toString();
     if (!dseq) {
       throw new Error("Refusing to close deployment: query returned a deployment without a dseq");
     }
     return dseq;
-  });
+  }))];
 
   // A DSEQ-only cleanup already has the complete on-chain close subject. Do not
   // make that close depend on a lease existing or on its provider answering a

@@ -82,6 +82,19 @@ describe(closeDeployment.name, () => {
     expect(options.getLeaseStatus).not.toHaveBeenCalled();
   });
 
+  it("broadcasts one close when an exact DSEQ query repeats the same deployment", async () => {
+    const { sdk, wallet, inputs, options } = await setup({
+      deployments: [{ dseq: "12345" }, { dseq: "12345" }],
+      leases: [],
+    });
+
+    const result = await closeDeployment(sdk, wallet, inputs, options);
+
+    expect(result).toHaveLength(1);
+    expect(sdk.akash.deployment.v1beta4.closeDeployment).toHaveBeenCalledTimes(1);
+    expect(sdk.akash.market.v1beta5.getLeases).not.toHaveBeenCalled();
+  });
+
   it("does not require provider status for an exact DSEQ-only cleanup", async () => {
     const { sdk, wallet, inputs, options } = await setup({
       deployments: [{ dseq: "12345" }],

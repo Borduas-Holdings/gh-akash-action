@@ -88,15 +88,21 @@ describe("deploy action entry point", () => {
     expect(core.setFailed).toHaveBeenCalledWith("manifest failed after create");
   });
 
-  it("keeps the fresh-create callback at one load-bearing entry-point call site", () => {
+  it.each([
+    ["create callback", "{ onDeploymentCreated: publishReceipt }", "{}"],
+    [
+      "receipt publisher",
+      "publishDeploymentReceipt(deploymentId, inputs.deploymentReceiptPath);",
+      "void deploymentId;",
+    ],
+  ])("keeps the %s at one load-bearing entry-point call site", (_name, target, replacement) => {
     const source = fs.readFileSync(path.resolve(process.cwd(), "src/index.ts"), "utf-8");
-    const target = "{ onDeploymentCreated: publishReceipt }";
     const targetCount = source.split(target).length - 1;
     expect(targetCount).toBe(1);
-    const mutated = source.replace(target, "{}");
+    const mutated = source.replace(target, replacement);
     expect(mutated).not.toBe(source);
     expect(mutated.split(target).length - 1).toBe(0);
-    expect(mutated).toContain("createDeployment(sdk, wallet, inputs, {})");
+    expect(mutated).toContain(replacement);
   });
 
   it("publishes an adopted deployment through the separate success fallback", async () => {
