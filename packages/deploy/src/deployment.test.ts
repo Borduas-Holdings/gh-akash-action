@@ -8,8 +8,10 @@ import * as path from "node:path";
 import { mock, mockDeep } from "vitest-mock-extended";
 import { createDeployment, getExistingDeploymentDetails, updateDeploymentManifest, waitForBid, type Logger, type StoredDeploymentDetails } from "./deployment.js";
 import type { ActionInputs, JsonResponse } from "./inputs.js";
+import { publishDeploymentReceipt } from "./receipt.js";
 
 type ChainSDK = ReturnType<typeof createChainNodeWebSDK>;
+const realSetTimeout = globalThis.setTimeout;
 
 /**
  * Helper to run a promise with fake timers.
@@ -26,8 +28,13 @@ async function runWithFakeTimers<T>(promise: Promise<T>, maxIterations = 100): P
 
   for (let i = 0; i < maxIterations && !resolved; i++) {
     await vi.advanceTimersByTimeAsync(10_000);
+    // Advancing the virtual clock does not yield to native crypto or I/O
+    // completions. Use the captured real timer so a slow hosted runner cannot
+    // exhaust this loop and silently return an uninitialised result.
+    await new Promise((resolve) => realSetTimeout(resolve, 0));
   }
 
+  if (!resolved) throw new Error("promise did not settle while advancing the fake clock");
   if (error) throw error;
   return result!;
 }
@@ -271,28 +278,146 @@ describe(createDeployment.name, () => {
     );
   });
 
-  it("closes deployment on error", async () => {
-    const { sdk, wallet, inputs, generateToken, ownerAddress } = await setup({ getBidsError: new Error("Network error") });
+  it("retains a created deployment on error for the caller's exact cleanup path", async () => {
+    const { sdk, wallet, inputs, generateToken } = await setup({ getBidsError: new Error("Network error") });
+    const logger = mock<Logger>();
 
     vi.useFakeTimers();
     await expect(
       runWithFakeTimers(
-        createDeployment(sdk, wallet, inputs, { logger: mock<Logger>(), generateToken })
+        createDeployment(sdk, wallet, inputs, { logger, generateToken })
       )
     ).rejects.toThrow("Network error");
 
-    expect(sdk.akash.deployment.v1beta4.closeDeployment).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: {
-          owner: ownerAddress,
-          dseq: "12345",
-        },
-      }),
-      expect.objectContaining({
-        memo: "Deployment close by GitHub Action because of error",
-      })
+    expect(sdk.akash.deployment.v1beta4.closeDeployment).not.toHaveBeenCalled();
+    expect(logger.warning).toHaveBeenCalledWith(
+      "Deployment was NOT auto-closed. Use close-deployment action to clean up if needed."
     );
   });
+
+  it("publishes the wallet owner and dseq before a post-create bid failure", async () => {
+    const { sdk, wallet, inputs, generateToken, ownerAddress } = await setup();
+    const events: string[] = [];
+    sdk.akash.deployment.v1beta4.createDeployment.mockImplementation(async () => {
+      events.push("create-broadcast");
+      return undefined as any;
+    });
+    sdk.akash.market.v1beta5.getBids.mockImplementation(async () => {
+      events.push("bid-query");
+      throw new Error("post-create bid failure");
+    });
+    const onDeploymentCreated = vi.fn(async () => {
+      events.push("publish-receipt");
+    });
+
+    vi.useFakeTimers();
+    await expect(
+      runWithFakeTimers(
+        createDeployment(sdk, wallet, inputs, {
+          logger: mock<Logger>(),
+          generateToken,
+          onDeploymentCreated,
+        })
+      )
+    ).rejects.toThrow("post-create bid failure");
+
+    expect(onDeploymentCreated).toHaveBeenCalledOnce();
+    expect(onDeploymentCreated).toHaveBeenCalledWith({ owner: ownerAddress, dseq: "12345" });
+    expect(events.slice(0, 3)).toEqual(["create-broadcast", "publish-receipt", "bid-query"]);
+    expect(sdk.akash.deployment.v1beta4.closeDeployment).not.toHaveBeenCalled();
+  });
+
+  it("reports failed receipt publication after create and attempts every recovery output", async () => {
+    const { sdk, wallet, inputs, generateToken, ownerAddress } = await setup();
+    const logger = mock<Logger>();
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "akash-receipt-publication-failure-"));
+    const receiptPath = path.join(directory, "receipt.json");
+    const blockedTempPath = `${receiptPath}.tmp-${process.pid}`;
+    fs.mkdirSync(blockedTempPath);
+    const outputAttempts: [string, string][] = [];
+    const publishReceipt = (deploymentId: { owner: string; dseq: string }) => {
+      publishDeploymentReceipt(
+        deploymentId,
+        receiptPath,
+        (name, value) => {
+          outputAttempts.push([name, value]);
+        },
+      );
+    };
+
+    try {
+      await expect(
+        createDeployment(sdk, wallet, inputs, {
+          logger,
+          generateToken,
+          onDeploymentCreated: publishReceipt,
+        }),
+      ).rejects.toThrow("Deployment receipt publication was incomplete");
+
+      expect(sdk.akash.deployment.v1beta4.createDeployment).toHaveBeenCalledOnce();
+      expect(outputAttempts).toEqual([
+        ["deployment-owner", ownerAddress],
+        ["deployment-id", `${ownerAddress}/12345`],
+        ["dseq", "12345"],
+      ]);
+      expect(fs.existsSync(receiptPath)).toBe(false);
+      expect(fs.statSync(blockedTempPath).isDirectory()).toBe(true);
+      expect(sdk.akash.market.v1beta5.getBids).not.toHaveBeenCalled();
+      expect(sdk.akash.deployment.v1beta4.closeDeployment).not.toHaveBeenCalled();
+      expect(logger.error).toHaveBeenCalledWith(
+        "Deployment failed: Deployment receipt publication was incomplete",
+      );
+      expect(logger.warning).toHaveBeenCalledWith(
+        "Deployment was NOT auto-closed. Use close-deployment action to clean up if needed.",
+      );
+    } finally {
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it.each(["bid", "lease", "manifest", "status"] as const)(
+    "retains the exact receipt through a post-create %s failure",
+    async (phase) => {
+      const { sdk, wallet, inputs, fetch, generateToken, ownerAddress } = await setup();
+      const failure = new Error(`${phase} failed after create`);
+      if (phase === "bid") {
+        sdk.akash.market.v1beta5.getBids.mockRejectedValue(failure);
+      } else if (phase === "lease") {
+        sdk.akash.market.v1beta5.createLease.mockRejectedValue(failure);
+      } else if (phase === "manifest") {
+        fetch.mockImplementation(async (input) => {
+          if (String(input).includes("/manifest")) {
+            throw failure;
+          }
+          return new Response("", { status: 200 });
+        });
+      } else {
+        fetch.mockImplementation(async (input) => {
+          if (String(input).includes("/status")) {
+            throw failure;
+          }
+          return new Response("", { status: 200 });
+        });
+      }
+      const onDeploymentCreated = vi.fn();
+
+      vi.useFakeTimers();
+      await expect(
+        runWithFakeTimers(
+          createDeployment(sdk, wallet, inputs, {
+            fetch,
+            logger: mock<Logger>(),
+            generateToken,
+            onDeploymentCreated,
+          })
+        )
+      ).rejects.toThrow(`${phase} failed after create`);
+
+      expect(onDeploymentCreated).toHaveBeenCalledOnce();
+      expect(onDeploymentCreated).toHaveBeenCalledWith({ owner: ownerAddress, dseq: "12345" });
+      expect(sdk.akash.deployment.v1beta4.closeDeployment).not.toHaveBeenCalled();
+    }
+  );
 
   it("creates lease after finding bid", async () => {
     const { sdk, wallet, inputs, fetch, mockBid, generateToken } = await setup();
@@ -403,9 +528,11 @@ describe(createDeployment.name, () => {
     getBidsError?: Error;
   }) {
     const sdk = mockDeep<ChainSDK>();
-    const wallet = await DirectSecp256k1HdWallet.generate(12, { prefix: "akash" });
-    const [account] = await wallet.getAccounts();
-    const ownerAddress = account.address;
+    const ownerAddress = "akash1n4uut3vxmkdp8wsrya3q0qyddgqey0rh9as4ee";
+    const wallet = {
+      mnemonic: "deterministic test mnemonic",
+      getAccounts: vi.fn(async () => [{ address: ownerAddress }]),
+    } as unknown as DirectSecp256k1HdWallet;
     const providerAddress = "akash1provider0000000000000000000000000000";
 
     // Mock fetch returns LeaseStatus structure for getLeaseStatus calls
@@ -585,15 +712,18 @@ describe(updateDeploymentManifest.name, () => {
 
   async function setup() {
     const sdk = mockDeep<ChainSDK>();
-    const wallet = await DirectSecp256k1HdWallet.generate(12, { prefix: "akash" });
-    const [account] = await wallet.getAccounts();
+    const ownerAddress = "akash1n4uut3vxmkdp8wsrya3q0qyddgqey0rh9as4ee";
+    const wallet = {
+      mnemonic: "deterministic test mnemonic",
+      getAccounts: vi.fn(async () => [{ address: ownerAddress }]),
+    } as unknown as DirectSecp256k1HdWallet;
     const providerAddress = "akash1provider0000000000000000000000000000";
 
     const existingDeployment: StoredDeploymentDetails = {
       dseq: "99999",
       lease: {
         id: {
-          owner: account.address,
+          owner: ownerAddress,
           dseq: "99999",
           gseq: 1,
           oseq: 1,

@@ -261937,77 +261937,105 @@ async function closeDeployment(sdk, wallet, inputs, options) {
     logger: core_exports,
     getLeaseStatus: import_actions_utils.getLeaseStatus,
     generateToken: import_actions_utils.generateToken,
-    getProviderHostUri: getProviderHostUri
+    getProviderHostUri: getProviderHostUri,
+    assertExpectedOwner: assertExpectedOwner
   };
   const [account] = await wallet.getAccounts();
+  di.assertExpectedOwner(inputs.expectedOwner, account.address);
   di.logger.info(`Using account: ${account.address}`);
-  const deploymentFilters = {
-    ...inputs.deploymentFilter,
-    owner: account.address
-  };
-  di.logger.info(`Fetching deployments with filters: ${JSON.stringify(deploymentFilters)}`);
-  const deploymentsResult = await sdk.akash.deployment.v1beta4.getDeployments({
-    filters: deploymentFilters
-  });
-  di.logger.info(`Found ${deploymentsResult.deployments.length} deployments matching filters`);
-  const leases = await Promise.all(deploymentsResult.deployments.map(async (deployment) => {
-    const deploymenLeases = await sdk.akash.market.v1beta5.getLeases({
-      filters: {
-        owner: account.address,
-        dseq: deployment.deployment?.id?.dseq
+  const exactDseq = inputs.deploymentFilter.dseq?.toString();
+  let deployments = [];
+  let deploymentDseqs;
+  if (exactDseq && !inputs.leaseFilter) {
+    if (!/^[1-9][0-9]*$/.test(exactDseq)) {
+      throw new Error("Refusing to close deployment: dseq is not a positive canonical decimal");
+    }
+    deploymentDseqs = [exactDseq];
+  } else {
+    const deploymentFilters = {
+      ...inputs.deploymentFilter,
+      owner: account.address
+    };
+    di.logger.info(`Fetching deployments with filters: ${JSON.stringify(deploymentFilters)}`);
+    const deploymentsResult = await sdk.akash.deployment.v1beta4.getDeployments({
+      filters: deploymentFilters
+    });
+    deployments = deploymentsResult.deployments;
+    di.logger.info(`Found ${deployments.length} deployments matching filters`);
+    deploymentDseqs = [...new Set(deployments.map((deployment) => {
+      const dseq = deployment.deployment?.id?.dseq?.toString();
+      if (!dseq) {
+        throw new Error("Refusing to close deployment: query returned a deployment without a dseq");
       }
-    });
-    const permissions = [];
-    deploymenLeases.leases.map((lease) => {
-      permissions.push({
-        access: "scoped",
-        provider: lease.lease?.id?.provider,
-        scope: ["status"]
-      });
-    });
-    const token = await di.generateToken(wallet, () => ({
-      access: "granular",
-      permissions
-    }));
-    return await Promise.all(deploymenLeases.leases.map(async (lease) => {
-      return {
-        dseq: lease?.lease?.id?.dseq?.toString() || "",
-        state: lease.lease?.state,
-        status: await di.getLeaseStatus({
-          dseq: deployment.deployment?.id?.dseq?.toString() || "",
-          token,
-          providerHostUri: await di.getProviderHostUri(sdk, lease.lease?.id?.provider)
-        }),
-        provider: lease.lease?.id?.provider || "",
-        createdAt: lease.lease?.createdAt?.toString() || "",
-        closedOn: lease.lease?.closedOn?.toString(),
-        closedReason: lease.lease?.reason
-      };
-    }));
-  }));
-  let allLeases = leases.flat();
-  di.logger.info(`Total leases found for deployments: ${allLeases.length}`);
+      return dseq;
+    }))];
+  }
   if (inputs.leaseFilter) {
-    allLeases = inputs.leaseFilter ? allLeases.filter(inputs.leaseFilter) : allLeases;
-    di.logger.info(`Leases after applying lease filter: ${allLeases.length}`);
+    const leases = await Promise.all(deployments.map(async (deployment) => {
+      const deploymenLeases = await sdk.akash.market.v1beta5.getLeases({
+        filters: {
+          owner: account.address,
+          dseq: deployment.deployment?.id?.dseq
+        }
+      });
+      const permissions = [];
+      deploymenLeases.leases.map((lease) => {
+        permissions.push({
+          access: "scoped",
+          provider: lease.lease?.id?.provider,
+          scope: ["status"]
+        });
+      });
+      const token = await di.generateToken(wallet, () => ({
+        access: "granular",
+        permissions
+      }));
+      return await Promise.all(deploymenLeases.leases.map(async (lease) => {
+        return {
+          dseq: lease?.lease?.id?.dseq?.toString() || "",
+          state: lease.lease?.state,
+          status: await di.getLeaseStatus({
+            dseq: deployment.deployment?.id?.dseq?.toString() || "",
+            token,
+            providerHostUri: await di.getProviderHostUri(sdk, lease.lease?.id?.provider)
+          }),
+          provider: lease.lease?.id?.provider || "",
+          createdAt: lease.lease?.createdAt?.toString() || "",
+          closedOn: lease.lease?.closedOn?.toString(),
+          closedReason: lease.lease?.reason
+        };
+      }));
+    }));
+    const allLeases = leases.flat();
+    di.logger.info(`Total leases found for deployments: ${allLeases.length}`);
+    const matchingLeases = allLeases.filter(inputs.leaseFilter);
+    di.logger.info(`Leases after applying lease filter: ${matchingLeases.length}`);
+    deploymentDseqs = [...new Set(matchingLeases.map((lease) => lease.dseq))];
   }
   const txOptions = buildTxOptions(inputs, "Deployment closed via GitHub Action");
   const results = [];
-  for (const lease of allLeases) {
-    di.logger.info(`Closing deployment ${lease.dseq} with lease status: ${lease.state}`);
+  for (const dseq of deploymentDseqs) {
+    di.logger.info(`Closing deployment ${dseq}`);
     const deploymentId = {
       owner: account.address,
-      dseq: lease.dseq
+      dseq
     };
     await sdk.akash.deployment.v1beta4.closeDeployment({ id: deploymentId }, {
       ...txOptions,
       afterBroadcast(tx) {
-        results.push({ dseq: lease.dseq, txHash: tx.transactionHash });
+        results.push({ dseq, txHash: tx.transactionHash });
       }
     });
-    di.logger.info(`Deployment ${lease.dseq} has been closed successfully!`);
+    di.logger.info(`Deployment ${dseq} has been closed successfully!`);
   }
   return results;
+}
+function assertExpectedOwner(expectedOwner, signerOwner) {
+  if (expectedOwner && expectedOwner !== signerOwner) {
+    throw new Error(
+      `Refusing to close deployment: expected owner ${expectedOwner} does not match signing account ${signerOwner}`
+    );
+  }
 }
 function buildTxOptions(inputs, memo) {
   const txOptions = {
@@ -262364,25 +262392,35 @@ async function resolveRpc() {
   const endpoints = endpointsInput ? (0, import_actions_utils2.parseEndpoints)(endpointsInput) : [...import_actions_utils2.DEFAULT_RPC_ENDPOINTS];
   return (0, import_actions_utils2.resolveHealthyEndpoints)(endpoints, { logger: core_exports });
 }
-async function getInputs() {
+async function resolveInputEndpoints(inputs) {
+  const rpc = await resolveRpc();
+  return {
+    ...inputs,
+    queryRestUrl: rpc.restUrl,
+    txRpcUrl: rpc.rpcUrl
+  };
+}
+async function getInputs(options = {}) {
   const mnemonic = getInput("mnemonic", { required: true });
+  const expectedOwner = getInput("expected-owner") || void 0;
   const gas = getInput("gas") || "auto";
   const gasMultiplier = getInput("gas-multiplier") || "1.5";
   const fee = getInput("fee") || "";
   const denom = getInput("denom") || "uakt";
   const { deploymentFilter, leaseFilter } = parseFilter(getInput("filter", { required: true }));
-  const rpc = await resolveRpc();
-  return {
+  const inputs = {
     mnemonic,
+    expectedOwner,
     gas,
     gasMultiplier,
     fee,
     denom,
-    queryRestUrl: rpc.restUrl,
-    txRpcUrl: rpc.rpcUrl,
+    queryRestUrl: "",
+    txRpcUrl: "",
     deploymentFilter,
     leaseFilter
   };
+  return options.resolveEndpoints === false ? inputs : resolveInputEndpoints(inputs);
 }
 function parseFilter(filter) {
   if (filter === "all") return { deploymentFilter: {} };
@@ -262405,8 +262443,19 @@ function varlidateFilter(rawFilter) {
     throw new Error(`"filter" input must be an object`);
   }
   const filter = rawFilter;
-  if (filter.dseq !== void 0 && typeof filter.dseq !== "string" && typeof filter.dseq !== "number") {
-    throw new Error(`"dseq" filter must be a string or number if provided`);
+  if ("owner" in filter) {
+    throw new Error(`"owner" must be passed through the "expected-owner" input, not the filter`);
+  }
+  if (filter.dseq !== void 0) {
+    if (typeof filter.dseq !== "string") {
+      throw new Error(`"dseq" filter must be a quoted canonical decimal string`);
+    }
+    if (!/^[1-9][0-9]*$/.test(filter.dseq)) {
+      throw new Error(`"dseq" filter must be a positive canonical decimal`);
+    }
+    if (BigInt(filter.dseq) > 18446744073709551615n) {
+      throw new Error(`"dseq" filter exceeds uint64`);
+    }
   }
   if (filter.lease && typeof filter.lease !== "object") {
     throw new Error(`"lease" filter must be an object if provided`);
@@ -262417,11 +262466,14 @@ function varlidateFilter(rawFilter) {
 // src/index.ts
 async function run() {
   try {
-    const inputs = await getInputs();
+    let inputs = await getInputs({ resolveEndpoints: false });
     info("Initializing wallet...");
     const wallet = await import_proto_signing2.DirectSecp256k1HdWallet.fromMnemonic(inputs.mnemonic, {
       prefix: "akash"
     });
+    const [account] = await wallet.getAccounts();
+    assertExpectedOwner(inputs.expectedOwner, account.address);
+    inputs = await resolveInputEndpoints(inputs);
     info("Connecting to Akash network...");
     const sdk = createChainNodeWebSDK({
       query: {
@@ -262445,7 +262497,7 @@ async function run() {
     }
   }
 }
-run();
+var runPromise = run();
 /*! Bundled license information:
 
 long/index.js:
@@ -262588,3 +262640,6 @@ jsrsasign/lib/jsrsasign.js:
 js-yaml/dist/js-yaml.mjs:
   (*! js-yaml 4.1.1 https://github.com/nodeca/js-yaml @license MIT *)
 */
+
+exports.run = run;
+exports.runPromise = runPromise;

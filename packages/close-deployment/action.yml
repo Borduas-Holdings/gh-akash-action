@@ -12,8 +12,15 @@ inputs:
     required: true
 
   filter:
-    description: 'Filter to select deployments to close'
+    description: 'Filter to select deployments to close. DSEQ values must be quoted canonical decimal strings.'
     required: true
+
+  expected-owner:
+    description: >-
+      Expected Akash owner address for the deployment subject. When set, the
+      action refuses before querying or broadcasting unless the signing
+      mnemonic resolves to this exact address.
+    required: false
 
   gas:
     description: 'Gas limit for transactions'

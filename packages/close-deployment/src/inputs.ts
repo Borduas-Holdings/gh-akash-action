@@ -16,6 +16,7 @@ export interface DeploymentContext {
 
 export interface ActionInputs {
   mnemonic: string;
+  expectedOwner?: string;
   deploymentFilter: {
     dseq?: string;
     state?: string;
@@ -54,27 +55,38 @@ async function resolveRpc(): Promise<ResolvedEndpoints> {
   return resolveHealthyEndpoints(endpoints, { logger: core });
 }
 
-export async function getInputs(): Promise<ActionInputs> {
+export async function resolveInputEndpoints(inputs: ActionInputs): Promise<ActionInputs> {
+  const rpc = await resolveRpc();
+  return {
+    ...inputs,
+    queryRestUrl: rpc.restUrl,
+    txRpcUrl: rpc.rpcUrl,
+  };
+}
+
+export async function getInputs(options: { resolveEndpoints?: boolean } = {}): Promise<ActionInputs> {
   const mnemonic = core.getInput("mnemonic", { required: true });
+  const expectedOwner = core.getInput("expected-owner") || undefined;
   const gas = core.getInput("gas") || "auto";
   const gasMultiplier = core.getInput("gas-multiplier") || "1.5";
   const fee = core.getInput("fee") || "";
   const denom = core.getInput("denom") || "uakt";
   const { deploymentFilter, leaseFilter } = parseFilter(core.getInput("filter", { required: true }));
 
-  const rpc = await resolveRpc();
-
-  return {
+  const inputs: ActionInputs = {
     mnemonic,
+    expectedOwner,
     gas,
     gasMultiplier,
     fee,
     denom,
-    queryRestUrl: rpc.restUrl,
-    txRpcUrl: rpc.rpcUrl,
+    queryRestUrl: "",
+    txRpcUrl: "",
     deploymentFilter,
     leaseFilter
   };
+
+  return options.resolveEndpoints === false ? inputs : resolveInputEndpoints(inputs);
 }
 
 function parseFilter(filter: string) {
@@ -103,8 +115,19 @@ function varlidateFilter(rawFilter: unknown): { lease?: Record<string, unknown>;
   }
 
   const filter = rawFilter as Record<string, unknown>;
-  if (filter.dseq !== undefined && typeof filter.dseq !== "string" && typeof filter.dseq !== "number") {
-    throw new Error(`"dseq" filter must be a string or number if provided`);
+  if ("owner" in filter) {
+    throw new Error(`"owner" must be passed through the "expected-owner" input, not the filter`);
+  }
+  if (filter.dseq !== undefined) {
+    if (typeof filter.dseq !== "string") {
+      throw new Error(`"dseq" filter must be a quoted canonical decimal string`);
+    }
+    if (!/^[1-9][0-9]*$/.test(filter.dseq)) {
+      throw new Error(`"dseq" filter must be a positive canonical decimal`);
+    }
+    if (BigInt(filter.dseq) > 18_446_744_073_709_551_615n) {
+      throw new Error(`"dseq" filter exceeds uint64`);
+    }
   }
 
   if (filter.lease && typeof filter.lease !== "object") {

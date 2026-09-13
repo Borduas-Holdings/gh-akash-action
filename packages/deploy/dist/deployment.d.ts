@@ -44,6 +44,7 @@ export declare function createDeployment(sdk: ChainSDK, wallet: DirectSecp256k1H
     fetch?: typeof globalThis.fetch;
     logger?: Logger;
     generateToken?: typeof generateToken;
+    onDeploymentCreated?: (deploymentId: DeploymentResult["deploymentId"]) => void | Promise<void>;
 }): Promise<DeploymentResult>;
 export declare function updateDeploymentManifest(sdk: ChainSDK, wallet: DirectSecp256k1HdWallet, inputs: ActionInputs, existingDeployment: StoredDeploymentDetails, options?: {
     fetch?: typeof globalThis.fetch;

@@ -2,17 +2,21 @@ import * as core from "@actions/core";
 import { DirectSecp256k1HdWallet } from "@cosmjs/proto-signing";
 import { createChainNodeWebSDK } from "@akashnetwork/chain-sdk/web";
 import { createStargateClient } from "@akashnetwork/chain-sdk";
-import { closeDeployment } from "./close-deployment.js";
-import { getInputs } from "./inputs.js";
+import { assertExpectedOwner, closeDeployment } from "./close-deployment.js";
+import { getInputs, resolveInputEndpoints } from "./inputs.js";
 
-async function run(): Promise<void> {
+export async function run(): Promise<void> {
   try {
-    const inputs = await getInputs();
+    let inputs = await getInputs({ resolveEndpoints: false });
 
     core.info("Initializing wallet...");
     const wallet = await DirectSecp256k1HdWallet.fromMnemonic(inputs.mnemonic, {
       prefix: "akash",
     });
+    const [account] = await wallet.getAccounts();
+    assertExpectedOwner(inputs.expectedOwner, account.address);
+
+    inputs = await resolveInputEndpoints(inputs);
 
     core.info("Connecting to Akash network...");
     const sdk = createChainNodeWebSDK({
@@ -41,4 +45,4 @@ async function run(): Promise<void> {
   }
 }
 
-run();
+export const runPromise = run();

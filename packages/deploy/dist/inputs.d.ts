@@ -12,6 +12,7 @@ export interface ActionInputs {
     txRpcUrl: string;
     leaseTimeout: number;
     deploymentDetailsPath?: string;
+    deploymentReceiptPath?: string;
 }
 export declare function getInputs(): Promise<ActionInputs>;
 export type JsonResponse<T> = {

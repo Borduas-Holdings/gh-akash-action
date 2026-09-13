@@ -10,7 +10,7 @@ This GitHub Action closes one or more deployments on the Akash Network. Deployme
   with:
     mnemonic: ${{ secrets.AKASH_MNEMONIC }}
     filter: |
-      dseq: 12345
+      dseq: "12345"
 ```
 
 ## Inputs
@@ -19,6 +19,7 @@ This GitHub Action closes one or more deployments on the Akash Network. Deployme
 |-------|-------------|----------|---------|
 | `mnemonic` | Wallet mnemonic phrase for signing transactions | Yes | - |
 | `filter` | YAML filter to select deployments/leases to close (see [Filter](#filter)) | Yes | - |
+| `expected-owner` | Exact Akash owner expected to match the signing mnemonic; mismatch refuses before chain queries or broadcast | No | - |
 | `gas` | Gas limit for transactions | No | `auto` |
 | `gas-multiplier` | Gas multiplier (used when gas is `auto`) | No | `1.5` |
 | `fee` | Fee amount in the smallest denomination | No | - |
@@ -30,11 +31,16 @@ This GitHub Action closes one or more deployments on the Akash Network. Deployme
 
 The `filter` input is a required YAML string. At least one top-level field must be provided. All matching active deployments owned by the wallet are closed.
 
+A DSEQ-only filter closes the matching deployment directly. It does not require
+a lease to exist or contact a provider, so it remains usable after bid failure or
+provider loss. Lease enumeration and provider status are consulted only when a
+`lease` predicate is explicitly present.
+
 ### Top-level fields
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `dseq` | `number` | Close only the deployment with this sequence number |
+| `dseq` | quoted canonical decimal string | Close only the deployment with this sequence number |
 | `lease` | `object` | MongoDB-style condition object applied to each lease — only leases that match are closed. See https://www.npmjs.com/package/@ucast/mongo2js |
 
 ### Lease filter fields
@@ -55,7 +61,7 @@ Standard MongoDB query operators (`$eq`, `$gt`, `$in`, `$and`, `$or`, etc.) are 
 ```yaml
 # Close a specific deployment by dseq
 filter: |
-  dseq: 12345
+  dseq: "12345"
 ```
 
 ```yaml
@@ -68,7 +74,7 @@ filter: |
 ```yaml
 # Close a specific deployment, only if its lease is still active
 filter: |
-  dseq: 12345
+  dseq: "12345"
   lease:
     state: active
 ```
@@ -115,7 +121,7 @@ jobs:
         with:
           mnemonic: ${{ secrets.AKASH_MNEMONIC }}
           filter: |
-            dseq: ${{ github.event.inputs.dseq }}
+            dseq: "${{ github.event.inputs.dseq }}"
 ```
 
 ### Close preview environment on PR close
@@ -142,7 +148,7 @@ jobs:
         with:
           mnemonic: ${{ secrets.AKASH_MNEMONIC }}
           filter: |
-            dseq: ${{ steps.get-dseq.outputs.dseq }}
+            dseq: "${{ steps.get-dseq.outputs.dseq }}"
             lease:
               state: active
 ```
@@ -168,7 +174,17 @@ with:
   mnemonic: ${{ secrets.AKASH_MNEMONIC }}
 ```
 
-2. **Use environment protection**: Consider using GitHub Environments with required reviewers for production deployments.
+2. **Bind exact cleanup subjects to their owner**: When a DSEQ comes from an earlier job or persisted receipt, pass that receipt's owner as `expected-owner`. The action refuses if credential rotation selects a different signing account.
+
+```yaml
+with:
+  mnemonic: ${{ secrets.AKASH_MNEMONIC }}
+  expected-owner: ${{ needs.provision.outputs.owner }}
+  filter: |
+    dseq: "${{ needs.provision.outputs.dseq }}"
+```
+
+3. **Use environment protection**: Consider using GitHub Environments with required reviewers for production deployments.
 
 ## Network Configuration
 
@@ -178,7 +194,7 @@ By default, the action connects to the Akash mainnet. You can configure custom e
 with:
   mnemonic: ${{ secrets.AKASH_MNEMONIC }}
   filter: |
-    dseq: 12345
+    dseq: "12345"
   rest-url: 'https://custom-rest.akash.network'
   tx-rpc-url: 'https://custom-rpc.akash.network'
 ```

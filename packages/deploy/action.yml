@@ -95,12 +95,25 @@ inputs:
       After any new deployment, the file is written with the latest dseq and lease details.
     required: false
 
+  deployment-receipt-path:
+    description: |
+      Optional path for an atomic owner/dseq receipt. For a new deployment this is
+      written immediately after the create transaction, before bid, lease, manifest,
+      or status work, so an always() cleanup step can recover it after later failure.
+    required: false
+
 outputs:
+  deployment-owner:
+    description: 'The wallet-derived owner of the deployment'
+
   deployment-id:
     description: 'The deployment ID (owner/dseq)'
 
   dseq:
     description: 'The deployment sequence number'
+
+  deployment-receipt-path:
+    description: 'Absolute path of the atomic owner/dseq receipt, when requested'
 
   lease-id:
     description: 'The lease ID (owner/dseq/gseq/oseq/provider)'
