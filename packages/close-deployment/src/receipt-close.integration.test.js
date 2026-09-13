@@ -3,8 +3,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { DirectSecp256k1HdWallet } from "@cosmjs/proto-signing";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { closeDeployment } from "../../close-deployment/src/close-deployment.ts";
-import { publishDeploymentReceipt } from "./receipt.ts";
+import { publishDeploymentReceipt } from "../../deploy/src/receipt.ts";
+import { closeDeployment } from "./close-deployment.ts";
 
 describe("post-create receipt to exact close", () => {
   const directories = [];
